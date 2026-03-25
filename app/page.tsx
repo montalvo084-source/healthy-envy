@@ -1,65 +1,164 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import type { Phase, DailyLog, Profile } from "@/lib/types";
+import {
+  calcStreak,
+  calcAvgProtein,
+  calcPhaseDay,
+  todayStr,
+} from "@/lib/calculations";
+import ProgressBar from "@/components/ProgressBar";
+import ChartProtein from "@/components/ChartProtein";
+
+export default function Dashboard() {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [phases, setPhases] = useState<Phase[]>([]);
+  const [logs, setLogs] = useState<DailyLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const [profileRes, phasesRes, logsRes] = await Promise.all([
+        fetch("/api/profile"),
+        fetch("/api/phases"),
+        fetch("/api/logs"),
+      ]);
+      setProfile(await profileRes.json());
+      setPhases(await phasesRes.json());
+      setLogs(await logsRes.json());
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="py-6 flex flex-col gap-4">
+        <div className="h-8 bg-surface rounded-lg animate-pulse w-48" />
+        <div className="h-24 bg-surface rounded-xl animate-pulse" />
+        <div className="h-20 bg-surface rounded-xl animate-pulse" />
+        <div className="h-48 bg-surface rounded-xl animate-pulse" />
+      </div>
+    );
+  }
+
+  const activePhase = phases.find((p) => p.active) ?? null;
+  const today = todayStr();
+  const todayLogged = logs.some((l) => l.date === today);
+  const streak = calcStreak(logs);
+  const avgProtein = calcAvgProtein(logs);
+  const proteinGoal = profile?.proteinGoal ?? 120;
+
+  const phaseDay = activePhase
+    ? calcPhaseDay(activePhase.startDate.split("T")[0])
+    : 0;
+  const daysRemaining = activePhase
+    ? Math.max(0, activePhase.duration - phaseDay + 1)
+    : 0;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="py-6 flex flex-col gap-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-extrabold text-app-text tracking-tight">
+          🧪 Healthy Envy
+        </h1>
+        <Link
+          href="/settings"
+          className="text-secondary hover:text-app-text transition-colors text-lg"
+          aria-label="Settings"
+        >
+          ⚙️
+        </Link>
+      </div>
+
+      {/* Active Phase Banner */}
+      {activePhase ? (
+        <div
+          className="bg-surface rounded-xl border border-border p-4"
+          style={{ borderLeftColor: activePhase.color, borderLeftWidth: 3 }}
+        >
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{activePhase.icon}</span>
+                <span className="font-bold text-app-text">{activePhase.name}</span>
+              </div>
+              <p className="text-secondary text-xs mt-0.5">
+                Day {phaseDay} of {activePhase.duration} · {daysRemaining} days
+                remaining
+              </p>
+            </div>
+            <span className="text-xs font-bold text-accent shrink-0">
+              {Math.round((phaseDay / activePhase.duration) * 100)}%
+            </span>
+          </div>
+          <ProgressBar value={phaseDay} max={activePhase.duration} color={activePhase.color} />
+        </div>
+      ) : (
+        <Link
+          href="/phases"
+          className="bg-surface rounded-xl border border-dashed border-border p-4 flex items-center justify-between text-secondary hover:border-accent/40 hover:text-accent transition-colors"
+        >
+          <span className="text-sm font-semibold">No active phase — set one up</span>
+          <span>→</span>
+        </Link>
+      )}
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-surface rounded-xl border border-border p-3 text-center">
+          <p className="text-2xl font-extrabold text-accent">{streak}</p>
+          <p className="text-xs text-secondary font-semibold uppercase tracking-wide mt-0.5">
+            🔥 Streak
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="bg-surface rounded-xl border border-border p-3 text-center">
+          <p className="text-2xl font-extrabold text-app-text">{logs.length}</p>
+          <p className="text-xs text-secondary font-semibold uppercase tracking-wide mt-0.5">
+            📝 Logs
+          </p>
         </div>
-      </main>
+        <div className="bg-surface rounded-xl border border-border p-3 text-center">
+          <p className="text-2xl font-extrabold text-app-text">{avgProtein}g</p>
+          <p className="text-xs text-secondary font-semibold uppercase tracking-wide mt-0.5">
+            🥩 Avg
+          </p>
+        </div>
+      </div>
+
+      {/* Log Today Button */}
+      <Link
+        href="/log"
+        className={`w-full py-4 rounded-xl font-extrabold text-base text-center transition-colors ${
+          todayLogged
+            ? "bg-success/10 border border-success text-success"
+            : "bg-accent text-bg hover:bg-accent/80"
+        }`}
+      >
+        {todayLogged ? "✅ Update Today's Log" : "📝 Log Today"}
+      </Link>
+
+      {/* Mini Protein Chart */}
+      <div className="bg-surface rounded-xl border border-border p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold text-app-text uppercase tracking-wide">
+            Protein · Last 14 Days
+          </h2>
+          <span className="text-xs text-secondary">Goal: {proteinGoal}g</span>
+        </div>
+        <ChartProtein logs={logs} goal={proteinGoal} days={14} />
+      </div>
+
+      {/* Record Measurement Button */}
+      <Link
+        href="/checkpoints"
+        className="w-full py-3 rounded-xl bg-surface border border-border text-secondary font-semibold text-sm text-center hover:border-accent/40 hover:text-accent transition-colors"
+      >
+        📏 Record a Measurement Checkpoint
+      </Link>
     </div>
   );
 }
