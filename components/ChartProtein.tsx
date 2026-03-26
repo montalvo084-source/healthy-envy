@@ -11,7 +11,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import type { DailyLog } from "@/lib/types";
-import { calcProteinTotal } from "@/lib/calculations";
+import { calcProteinTotal, formatDate } from "@/lib/calculations";
 
 interface ChartProteinProps {
   logs: DailyLog[];
@@ -26,7 +26,7 @@ export default function ChartProtein({
 }: ChartProteinProps) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days + 1);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = formatDate(cutoff);
 
   const data = logs
     .filter((l) => l.date >= cutoffStr)

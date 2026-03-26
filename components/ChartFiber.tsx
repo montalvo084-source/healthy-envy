@@ -11,6 +11,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import type { DailyLog } from "@/lib/types";
+import { formatDate } from "@/lib/calculations";
 
 interface ChartFiberProps {
   logs: DailyLog[];
@@ -25,7 +26,7 @@ export default function ChartFiber({
 }: ChartFiberProps) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days + 1);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = formatDate(cutoff);
 
   const data = logs
     .filter((l) => l.date >= cutoffStr && l.fiberGrams != null)

@@ -156,6 +156,11 @@ function LogContent() {
             {activePhase.icon} {activePhase.name}
           </p>
         )}
+        {existingLog && (
+          <p className="text-xs mt-1 font-semibold text-success">
+            ✓ Updating today&apos;s log — add as you go
+          </p>
+        )}
       </div>
 
       {/* Section: Protein */}
