@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 import type { DailyLog } from "@/lib/types";
 import LogCard from "@/components/LogCard";
+import { todayStr } from "@/lib/calculations";
+import { useProteinSources } from "@/lib/protein-sources-context";
 
 export default function HistoryPage() {
+  const { sources } = useProteinSources();
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,7 +59,7 @@ export default function HistoryPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {logs.map((log) => (
-            <LogCard key={log.id} log={log} />
+            <LogCard key={log.id} log={log} isToday={log.date === todayStr()} sources={sources} />
           ))}
         </div>
       )}

@@ -2,14 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { useToast } from "@/lib/toast-context";
-import type { Profile } from "@/lib/types";
+import { useProteinSources } from "@/lib/protein-sources-context";
+import type { Profile, ProteinSource } from "@/lib/types";
 
 export default function SettingsPage() {
   const { showToast } = useToast();
+  const { sources, reload: reloadSources } = useProteinSources();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resetStep, setResetStep] = useState<0 | 1 | 2>(0);
   const [resetInput, setResetInput] = useState("");
+
+  // Protein sources editing state
+  const [editingSource, setEditingSource] = useState<ProteinSource | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editProtein, setEditProtein] = useState("");
+  const [editUnit, setEditUnit] = useState("");
+  const [editEmoji, setEditEmoji] = useState("");
+  const [savingSource, setSavingSource] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // New source form
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newLabel, setNewLabel] = useState("");
+  const [newProtein, setNewProtein] = useState("");
+  const [newUnit, setNewUnit] = useState("g");
+  const [newEmoji, setNewEmoji] = useState("🥩");
+  const [addingSource, setAddingSource] = useState(false);
 
   // Stats
   const [logCount, setLogCount] = useState(0);
@@ -55,6 +74,101 @@ export default function SettingsPage() {
     }
     load();
   }, []);
+
+  function startEdit(source: ProteinSource) {
+    setEditingSource(source);
+    setEditLabel(source.label);
+    setEditProtein(String(source.protein));
+    setEditUnit(source.unit);
+    setEditEmoji(source.emoji);
+  }
+
+  async function handleSaveSource() {
+    if (!editingSource) return;
+    setSavingSource(true);
+    try {
+      const res = await fetch(`/api/protein-sources/${editingSource.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: editLabel,
+          protein: editProtein,
+          unit: editUnit,
+          emoji: editEmoji,
+          active: editingSource.active,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      await reloadSources();
+      setEditingSource(null);
+      showToast("Source updated!", "success");
+    } catch {
+      showToast("Something went wrong", "error");
+    } finally {
+      setSavingSource(false);
+    }
+  }
+
+  async function handleToggleActive(source: ProteinSource) {
+    await fetch(`/api/protein-sources/${source.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        label: source.label,
+        protein: source.protein,
+        unit: source.unit,
+        emoji: source.emoji,
+        active: !source.active,
+      }),
+    });
+    await reloadSources();
+  }
+
+  async function handleDeleteSource(id: number) {
+    if (deletingId !== id) {
+      setDeletingId(id);
+      return;
+    }
+    await fetch(`/api/protein-sources/${id}`, { method: "DELETE" });
+    await reloadSources();
+    setDeletingId(null);
+    showToast("Source deleted", "info");
+  }
+
+  async function handleAddSource() {
+    if (!newLabel || !newProtein) {
+      showToast("Name and protein amount are required", "error");
+      return;
+    }
+    setAddingSource(true);
+    try {
+      const key = newLabel.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") + "_" + Date.now();
+      const res = await fetch("/api/protein-sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key,
+          label: newLabel,
+          protein: newProtein,
+          unit: newUnit,
+          emoji: newEmoji,
+          active: true,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      await reloadSources();
+      setNewLabel("");
+      setNewProtein("");
+      setNewUnit("g");
+      setNewEmoji("🥩");
+      setShowAddForm(false);
+      showToast("Source added!", "success");
+    } catch {
+      showToast("Something went wrong", "error");
+    } finally {
+      setAddingSource(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -205,6 +319,184 @@ export default function SettingsPage() {
         >
           {saving ? "Saving..." : "Save Profile"}
         </button>
+      </section>
+
+      {/* Protein Sources */}
+      <section className="bg-surface rounded-xl border border-border p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-app-text uppercase tracking-wide">
+            Protein Sources
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowAddForm((v) => !v)}
+            className="text-xs font-bold text-accent hover:text-accent/80 transition-colors"
+          >
+            {showAddForm ? "Cancel" : "+ Add"}
+          </button>
+        </div>
+
+        {showAddForm && (
+          <div className="flex flex-col gap-3 border border-border rounded-xl p-3 bg-bg">
+            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">New Source</p>
+            <div className="flex gap-2">
+              <div className="flex flex-col gap-1 w-14">
+                <label className="text-xs text-secondary">Emoji</label>
+                <input
+                  type="text"
+                  value={newEmoji}
+                  onChange={(e) => setNewEmoji(e.target.value)}
+                  className="w-full bg-surface border border-border rounded-lg px-2 py-2 text-center text-lg focus:outline-none focus:border-accent"
+                  maxLength={4}
+                />
+              </div>
+              <div className="flex flex-col gap-1 flex-1">
+                <label className="text-xs text-secondary">Name</label>
+                <input
+                  type="text"
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  placeholder="e.g. Beef"
+                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div className="flex flex-col gap-1 flex-1">
+                <label className="text-xs text-secondary">Protein (g) per unit</label>
+                <input
+                  type="number"
+                  value={newProtein}
+                  onChange={(e) => setNewProtein(e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="0.1"
+                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div className="flex flex-col gap-1 flex-1">
+                <label className="text-xs text-secondary">Unit label</label>
+                <input
+                  type="text"
+                  value={newUnit}
+                  onChange={(e) => setNewUnit(e.target.value)}
+                  placeholder="g"
+                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddSource}
+              disabled={addingSource}
+              className="w-full py-2.5 rounded-xl bg-accent text-bg font-extrabold text-sm hover:bg-accent/80 transition-colors disabled:opacity-50"
+            >
+              {addingSource ? "Adding..." : "Add Source"}
+            </button>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          {sources.map((source) => (
+            <div key={source.id}>
+              {editingSource?.id === source.id ? (
+                <div className="flex flex-col gap-2 border border-accent/40 rounded-xl p-3 bg-bg">
+                  <div className="flex gap-2">
+                    <div className="flex flex-col gap-1 w-14">
+                      <label className="text-xs text-secondary">Emoji</label>
+                      <input
+                        type="text"
+                        value={editEmoji}
+                        onChange={(e) => setEditEmoji(e.target.value)}
+                        className="w-full bg-surface border border-border rounded-lg px-2 py-2 text-center text-lg focus:outline-none focus:border-accent"
+                        maxLength={4}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 flex-1">
+                      <label className="text-xs text-secondary">Name</label>
+                      <input
+                        type="text"
+                        value={editLabel}
+                        onChange={(e) => setEditLabel(e.target.value)}
+                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex flex-col gap-1 flex-1">
+                      <label className="text-xs text-secondary">Protein (g) per unit</label>
+                      <input
+                        type="number"
+                        value={editProtein}
+                        onChange={(e) => setEditProtein(e.target.value)}
+                        min="0"
+                        step="0.1"
+                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 flex-1">
+                      <label className="text-xs text-secondary">Unit label</label>
+                      <input
+                        type="text"
+                        value={editUnit}
+                        onChange={(e) => setEditUnit(e.target.value)}
+                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingSource(null)}
+                      className="flex-1 py-2 rounded-lg border border-border text-secondary font-bold text-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveSource}
+                      disabled={savingSource}
+                      className="flex-1 py-2 rounded-lg bg-accent text-bg font-bold text-sm disabled:opacity-50"
+                    >
+                      {savingSource ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${source.active ? "border-border bg-bg" : "border-border/50 bg-bg opacity-50"}`}>
+                  <span className="text-xl w-7 text-center">{source.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-app-text truncate">{source.label}</p>
+                    <p className="text-xs text-secondary">{source.protein}g per {source.unit}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleActive(source)}
+                      className={`text-xs px-2 py-1 rounded-lg font-semibold transition-colors ${source.active ? "text-success bg-success/10" : "text-secondary bg-border"}`}
+                    >
+                      {source.active ? "On" : "Off"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(source)}
+                      className="text-xs px-2 py-1 rounded-lg text-secondary hover:text-app-text bg-border transition-colors font-semibold"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSource(source.id)}
+                      className={`text-xs px-2 py-1 rounded-lg font-semibold transition-colors ${deletingId === source.id ? "bg-danger text-white" : "text-danger/70 bg-danger/10"}`}
+                    >
+                      {deletingId === source.id ? "Sure?" : "Del"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* Data Summary */}

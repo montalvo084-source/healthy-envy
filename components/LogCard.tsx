@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import type { DailyLog } from "@/lib/types";
+import type { DailyLog, ProteinSource } from "@/lib/types";
 import { calcProteinTotal, formatDisplayDate } from "@/lib/calculations";
 
 interface LogCardProps {
   log: DailyLog;
+  isToday?: boolean;
+  sources?: ProteinSource[];
 }
 
-export default function LogCard({ log }: LogCardProps) {
-  const protein = calcProteinTotal(log.proteinEntries ?? []);
+export default function LogCard({ log, isToday, sources }: LogCardProps) {
+  const protein = calcProteinTotal(log.proteinEntries ?? [], sources);
 
   return (
     <Link
@@ -18,7 +20,14 @@ export default function LogCard({ log }: LogCardProps) {
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div>
-          <p className="font-bold text-app-text">{formatDisplayDate(log.date)}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-bold text-app-text">{formatDisplayDate(log.date)}</p>
+            {isToday && (
+              <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
+                Today
+              </span>
+            )}
+          </div>
           {log.phase && (
             <span
               className="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block"

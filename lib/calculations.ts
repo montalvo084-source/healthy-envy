@@ -1,11 +1,15 @@
-import type { DailyLog, ProteinEntry } from "@/lib/types";
-import { getProteinSource } from "@/lib/protein-sources";
+import type { DailyLog, ProteinEntry, ProteinSource } from "@/lib/types";
+import { PROTEIN_SOURCES } from "@/lib/protein-sources";
 
-export function calcProteinTotal(entries: ProteinEntry[]): number {
+export function calcProteinTotal(
+  entries: ProteinEntry[],
+  sources: Pick<ProteinSource, "key" | "protein">[] = PROTEIN_SOURCES
+): number {
+  const map = new Map(sources.map((s) => [s.key, s.protein]));
   return entries.reduce((total, entry) => {
-    const source = getProteinSource(entry.sourceKey);
-    if (!source) return total;
-    return total + entry.quantity * source.protein;
+    const protein = map.get(entry.sourceKey);
+    if (protein == null) return total;
+    return total + entry.quantity * protein;
   }, 0);
 }
 
@@ -39,7 +43,11 @@ export function calcStreak(logs: DailyLog[]): number {
   return streak;
 }
 
-export function calcAvgProtein(logs: DailyLog[], days = 14): number {
+export function calcAvgProtein(
+  logs: DailyLog[],
+  days = 14,
+  sources?: Pick<ProteinSource, "key" | "protein">[]
+): number {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = formatDate(cutoff);
@@ -51,15 +59,15 @@ export function calcAvgProtein(logs: DailyLog[], days = 14): number {
   if (recent.length === 0) return 0;
 
   const total = recent.reduce((sum, log) => {
-    return sum + calcProteinTotal(log.proteinEntries ?? []);
+    return sum + calcProteinTotal(log.proteinEntries ?? [], sources);
   }, 0);
 
   return Math.round(total / recent.length);
 }
 
 export function calcPhaseDay(startDate: string): number {
-  const start = new Date(startDate);
-  start.setHours(0, 0, 0, 0);
+  const [y, m, d] = startDate.split("-").map(Number);
+  const start = new Date(y, m - 1, d); // local midnight, avoids UTC parse offset
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const diff = Math.floor(

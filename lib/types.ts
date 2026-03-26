@@ -1,3 +1,15 @@
+export interface ProteinSource {
+  id: number;
+  key: string;
+  label: string;
+  protein: number;
+  unit: string;
+  emoji: string;
+  active: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface Profile {
   id: number;
   name: string;

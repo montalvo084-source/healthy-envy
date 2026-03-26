@@ -90,3 +90,15 @@ model Checkpoint {
   note      String?
   createdAt DateTime @default(now())
 }
+
+model ProteinSource {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  label     String
+  protein   Float
+  unit      String
+  emoji     String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}

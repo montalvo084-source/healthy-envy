@@ -1,6 +1,6 @@
 "use client";
 
-import { getActiveProteinSources } from "@/lib/protein-sources";
+import { useProteinSources } from "@/lib/protein-sources-context";
 import ProgressBar from "@/components/ProgressBar";
 
 export interface ProteinCounts {
@@ -18,7 +18,8 @@ export default function ProteinTracker({
   onChange,
   goal,
 }: ProteinTrackerProps) {
-  const sources = getActiveProteinSources();
+  const { sources: allSources } = useProteinSources();
+  const sources = allSources.filter((s) => s.active);
 
   const total = sources.reduce((sum, source) => {
     return sum + (counts[source.key] ?? 0) * source.protein;

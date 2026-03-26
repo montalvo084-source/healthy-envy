@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/lib/toast-context";
+import { ProteinSourcesProvider } from "@/lib/protein-sources-context";
 import Nav from "@/components/Nav";
 
 const dmSans = DM_Sans({
@@ -37,10 +38,12 @@ export default function RootLayout({
     <html lang="en" className={`${dmSans.variable} h-full`}>
       <body className="min-h-full bg-bg text-app-text font-sans antialiased">
         <ToastProvider>
-          <main className="max-w-[480px] mx-auto min-h-screen pb-20 px-4">
-            {children}
-          </main>
-          <Nav />
+          <ProteinSourcesProvider>
+            <main className="max-w-[480px] mx-auto min-h-screen pb-20 px-4">
+              {children}
+            </main>
+            <Nav />
+          </ProteinSourcesProvider>
         </ToastProvider>
       </body>
     </html>

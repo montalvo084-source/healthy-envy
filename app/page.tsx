@@ -7,12 +7,15 @@ import {
   calcStreak,
   calcAvgProtein,
   calcPhaseDay,
+  calcProteinTotal,
   todayStr,
 } from "@/lib/calculations";
+import { useProteinSources } from "@/lib/protein-sources-context";
 import ProgressBar from "@/components/ProgressBar";
 import ChartProtein from "@/components/ChartProtein";
 
 export default function Dashboard() {
+  const { sources } = useProteinSources();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [phases, setPhases] = useState<Phase[]>([]);
   const [logs, setLogs] = useState<DailyLog[]>([]);
@@ -46,9 +49,10 @@ export default function Dashboard() {
 
   const activePhase = phases.find((p) => p.active) ?? null;
   const today = todayStr();
-  const todayLogged = logs.some((l) => l.date === today);
+  const todayLog = logs.find((l) => l.date === today) ?? null;
+  const todayLogged = todayLog !== null;
   const streak = calcStreak(logs);
-  const avgProtein = calcAvgProtein(logs);
+  const avgProtein = calcAvgProtein(logs, 14, sources);
   const proteinGoal = profile?.proteinGoal ?? 120;
 
   const phaseDay = activePhase
@@ -76,8 +80,9 @@ export default function Dashboard() {
 
       {/* Active Phase Banner */}
       {activePhase ? (
-        <div
-          className="bg-surface rounded-xl border border-border p-4"
+        <Link
+          href="/phases"
+          className="block bg-surface rounded-xl border border-border p-4 hover:border-accent/30 transition-colors"
           style={{ borderLeftColor: activePhase.color, borderLeftWidth: 3 }}
         >
           <div className="flex items-start justify-between gap-2 mb-2">
@@ -91,12 +96,12 @@ export default function Dashboard() {
                 remaining
               </p>
             </div>
-            <span className="text-xs font-bold text-accent shrink-0">
-              {Math.round((phaseDay / activePhase.duration) * 100)}%
+            <span className="text-xs font-bold text-secondary shrink-0">
+              {Math.round((phaseDay / activePhase.duration) * 100)}% →
             </span>
           </div>
           <ProgressBar value={phaseDay} max={activePhase.duration} color={activePhase.color} />
-        </div>
+        </Link>
       ) : (
         <Link
           href="/phases"
@@ -141,6 +146,22 @@ export default function Dashboard() {
         {todayLogged ? "✅ Update Today's Log" : "📝 Log Today"}
       </Link>
 
+      {/* Today's Log Summary */}
+      {todayLog && (
+        <div className="flex gap-4 px-1">
+          {calcProteinTotal(todayLog.proteinEntries ?? [], sources) > 0 && (
+            <span className="text-sm text-secondary">
+              🥩 <span className="text-app-text font-semibold">{Math.round(calcProteinTotal(todayLog.proteinEntries ?? [], sources))}g</span> protein
+            </span>
+          )}
+          {todayLog.fiberGrams != null && todayLog.fiberGrams > 0 && (
+            <span className="text-sm text-secondary">
+              🌿 <span className="text-app-text font-semibold">{todayLog.fiberGrams}g</span> fiber
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Mini Protein Chart */}
       <div className="bg-surface rounded-xl border border-border p-4">
         <div className="flex items-center justify-between mb-3">
@@ -149,7 +170,7 @@ export default function Dashboard() {
           </h2>
           <span className="text-xs text-secondary">Goal: {proteinGoal}g</span>
         </div>
-        <ChartProtein logs={logs} goal={proteinGoal} days={14} />
+        <ChartProtein logs={logs} goal={proteinGoal} days={14} sources={sources} />
       </div>
 
       {/* Record Measurement Button */}

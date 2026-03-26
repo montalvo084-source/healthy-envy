@@ -10,19 +10,21 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import type { DailyLog } from "@/lib/types";
+import type { DailyLog, ProteinSource } from "@/lib/types";
 import { calcProteinTotal, formatDate } from "@/lib/calculations";
 
 interface ChartProteinProps {
   logs: DailyLog[];
   goal: number;
   days?: number;
+  sources?: ProteinSource[];
 }
 
 export default function ChartProtein({
   logs,
   goal,
   days = 14,
+  sources,
 }: ChartProteinProps) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days + 1);
@@ -33,7 +35,7 @@ export default function ChartProtein({
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((log) => ({
       date: log.date.slice(5), // MM-DD
-      protein: Math.round(calcProteinTotal(log.proteinEntries ?? [])),
+      protein: Math.round(calcProteinTotal(log.proteinEntries ?? [], sources)),
     }));
 
   if (data.length === 0) {
