@@ -2,35 +2,30 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { Phase, DailyLog, Profile } from "@/lib/types";
+import type { DailyLog, Profile } from "@/lib/types";
 import {
   calcStreak,
   calcAvgProtein,
-  calcPhaseDay,
   calcProteinTotal,
   todayStr,
   formatDate,
 } from "@/lib/calculations";
 import { useProteinSources } from "@/lib/protein-sources-context";
-import ProgressBar from "@/components/ProgressBar";
 import ChartProtein from "@/components/ChartProtein";
 
 export default function Dashboard() {
   const { sources } = useProteinSources();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [phases, setPhases] = useState<Phase[]>([]);
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const [profileRes, phasesRes, logsRes] = await Promise.all([
+      const [profileRes, logsRes] = await Promise.all([
         fetch("/api/profile"),
-        fetch("/api/phases"),
         fetch("/api/logs"),
       ]);
       setProfile(await profileRes.json());
-      setPhases(await phasesRes.json());
       setLogs(await logsRes.json());
       setLoading(false);
     }
@@ -41,14 +36,13 @@ export default function Dashboard() {
     return (
       <div className="py-6 flex flex-col gap-4">
         <div className="h-8 bg-surface rounded-lg animate-pulse w-48" />
-        <div className="h-24 bg-surface rounded-xl animate-pulse" />
         <div className="h-20 bg-surface rounded-xl animate-pulse" />
+        <div className="h-24 bg-surface rounded-xl animate-pulse" />
         <div className="h-48 bg-surface rounded-xl animate-pulse" />
       </div>
     );
   }
 
-  const activePhase = phases.find((p) => p.active) ?? null;
   const today = todayStr();
   const todayLog = logs.find((l) => l.date === today) ?? null;
   const todayLogged = todayLog !== null;
@@ -76,13 +70,6 @@ export default function Dashboard() {
   const weeklyRemaining = Math.max(0, weeklyGoal - weeklyProtein);
   const weeklyPct = Math.min(100, (weeklyProtein / weeklyGoal) * 100);
 
-  const phaseDay = activePhase
-    ? calcPhaseDay(activePhase.startDate.split("T")[0])
-    : 0;
-  const daysRemaining = activePhase
-    ? Math.max(0, activePhase.duration - phaseDay + 1)
-    : 0;
-
   return (
     <div className="py-6 flex flex-col gap-5">
       {/* Header */}
@@ -98,42 +85,6 @@ export default function Dashboard() {
           ⚙️
         </Link>
       </div>
-
-      {/* Active Phase Banner */}
-      {activePhase ? (
-        <div
-          className="bg-surface rounded-xl border border-border p-4"
-          style={{ borderLeftColor: activePhase.color, borderLeftWidth: 3 }}
-        >
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{activePhase.icon}</span>
-                <span className="font-bold text-app-text">{activePhase.name}</span>
-              </div>
-              <p className="text-secondary text-xs mt-0.5">
-                Day {phaseDay} of {activePhase.duration} · {daysRemaining} days
-                remaining
-              </p>
-            </div>
-            <Link
-              href={`/phases/${activePhase.id}`}
-              className="text-xs font-bold text-secondary hover:text-accent transition-colors shrink-0 px-2 py-1 rounded-lg hover:bg-border"
-            >
-              Edit
-            </Link>
-          </div>
-          <ProgressBar value={phaseDay} max={activePhase.duration} color={activePhase.color} />
-        </div>
-      ) : (
-        <Link
-          href="/phases"
-          className="bg-surface rounded-xl border border-dashed border-border p-4 flex items-center justify-between text-secondary hover:border-accent/40 hover:text-accent transition-colors"
-        >
-          <span className="text-sm font-semibold">No active phase — set one up</span>
-          <span>→</span>
-        </Link>
-      )}
 
       {/* Stats Row */}
       <div className="grid grid-cols-3 gap-3">
@@ -152,7 +103,7 @@ export default function Dashboard() {
         <div className="bg-surface rounded-xl border border-border p-3 text-center">
           <p className="text-2xl font-extrabold text-app-text">{avgProtein}g</p>
           <p className="text-xs text-secondary font-semibold uppercase tracking-wide mt-0.5">
-            🥩 Avg
+            🥩 14d Avg
           </p>
         </div>
       </div>
@@ -230,7 +181,6 @@ function WeeklyProteinWidget({
   const prevLogged = useRef(logged);
 
   useEffect(() => {
-    // Animate on mount and whenever logged changes
     const t = setTimeout(() => setBarWidth(pct), 60);
     prevLogged.current = logged;
     return () => clearTimeout(t);
@@ -266,7 +216,6 @@ function WeeklyProteinWidget({
         )}
       </div>
 
-      {/* Animated bar */}
       <div className="h-3 bg-border rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full ${done ? "bg-success" : "bg-accent"}`}

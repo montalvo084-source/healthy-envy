@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/lib/toast-context";
 import { todayStr } from "@/lib/calculations";
-import type { Phase, DailyLog, Profile } from "@/lib/types";
+import type { DailyLog, Profile } from "@/lib/types";
 import ProteinTracker, { ProteinCounts } from "@/components/ProteinTracker";
 import ProgressBar from "@/components/ProgressBar";
 
@@ -33,7 +33,8 @@ function LogContent() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activePhase, setActivePhase] = useState<Phase | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [existingLog, setExistingLog] = useState<DailyLog | null>(null);
 
@@ -46,20 +47,15 @@ function LogContent() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [profileRes, phasesRes, logRes] = await Promise.all([
+      const [profileRes, logRes] = await Promise.all([
         fetch("/api/profile"),
-        fetch("/api/phases"),
         fetch(`/api/logs/${dateParam}`),
       ]);
 
       const profileData: Profile = await profileRes.json();
-      const phases: Phase[] = await phasesRes.json();
       const log: DailyLog | null = await logRes.json();
 
       setProfile(profileData);
-
-      const active = phases.find((p) => p.active) ?? null;
-      setActivePhase(active);
 
       if (log) {
         setExistingLog(log);
@@ -67,7 +63,6 @@ function LogContent() {
         setFiberGrams(log.fiberGrams != null ? String(log.fiberGrams) : "");
         setNote(log.note ?? "");
 
-        // Rebuild protein counts from saved entries
         const counts: ProteinCounts = {};
         (log.proteinEntries ?? []).forEach((e) => {
           counts[e.sourceKey] = e.quantity;
@@ -92,7 +87,7 @@ function LogContent() {
 
       const payload = {
         date: dateParam,
-        phaseId: activePhase?.id ?? null,
+        phaseId: null,
         proteinPriority: priority,
         fiberGrams: fiberGrams || null,
         note: note || null,
@@ -108,15 +103,30 @@ function LogContent() {
 
       if (!res.ok) throw new Error("Failed to save");
 
-      showToast(
-        existingLog ? "Log updated!" : "Log saved!",
-        "success"
-      );
-      router.push("/");
+      showToast(existingLog ? "Log updated!" : "Log saved!", "success");
+      router.push("/history");
     } catch {
       showToast("Something went wrong", "error");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteConfirm) {
+      setDeleteConfirm(true);
+      return;
+    }
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/logs/${dateParam}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      showToast("Log deleted", "info");
+      router.push("/history");
+    } catch {
+      showToast("Something went wrong", "error");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -146,36 +156,33 @@ function LogContent() {
   return (
     <div className="py-6 flex flex-col gap-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-extrabold text-app-text tracking-tight">
-          {existingLog ? "Update Log" : "Log Your Day"}
-        </h1>
-        <p className="text-secondary text-sm mt-0.5">{displayDate}</p>
-        {activePhase && (
-          <p className="text-xs mt-1 font-semibold" style={{ color: activePhase.color }}>
-            {activePhase.icon} {activePhase.name}
-          </p>
-        )}
-        {existingLog && (
-          <p className="text-xs mt-1 font-semibold text-success">
-            ✓ Updating today&apos;s log — add as you go
-          </p>
-        )}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="text-secondary hover:text-app-text text-xl"
+        >
+          ←
+        </button>
+        <div>
+          <h1 className="text-2xl font-extrabold text-app-text tracking-tight">
+            {existingLog ? "Edit Log" : "Log Your Day"}
+          </h1>
+          <p className="text-secondary text-sm mt-0.5">{displayDate}</p>
+        </div>
       </div>
 
       {/* Section: Protein */}
-      {(!activePhase || activePhase.trackProtein) && (
-        <section className="flex flex-col gap-3">
-          <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
-            🥩 Protein Intake
-          </label>
-          <ProteinTracker
-            counts={proteinCounts}
-            onChange={setProteinCounts}
-            goal={profile?.proteinGoal ?? 120}
-          />
-        </section>
-      )}
+      <section className="flex flex-col gap-3">
+        <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
+          🥩 Protein Intake
+        </label>
+        <ProteinTracker
+          counts={proteinCounts}
+          onChange={setProteinCounts}
+          goal={profile?.proteinGoal ?? 120}
+        />
+      </section>
 
       {/* Section: Fiber */}
       <section className="flex flex-col gap-3">
@@ -260,6 +267,22 @@ function LogContent() {
       >
         {saving ? "Saving..." : existingLog ? "Update Log" : "Save Log"}
       </button>
+
+      {/* Delete — only show when editing existing log */}
+      {existingLog && (
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          className={`w-full py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-50 ${
+            deleteConfirm
+              ? "bg-danger text-white"
+              : "border border-danger/50 text-danger hover:bg-danger/10"
+          }`}
+        >
+          {deleting ? "Deleting..." : deleteConfirm ? "Tap again to confirm delete" : "Delete This Log"}
+        </button>
+      )}
     </div>
   );
 }

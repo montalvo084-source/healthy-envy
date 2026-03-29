@@ -67,3 +67,16 @@ export async function PUT(
 
   return NextResponse.json(log);
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  ctx: RouteContext<"/api/logs/[date]">
+) {
+  const { date } = await ctx.params;
+  const existing = await db.dailyLog.findUnique({ where: { date } });
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  await db.dailyLog.delete({ where: { date } });
+  return NextResponse.json({ deleted: true });
+}
