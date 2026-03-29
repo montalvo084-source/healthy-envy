@@ -25,32 +25,28 @@ export async function PUT(request: NextRequest) {
       age: body.age !== undefined ? Number(body.age) : undefined,
       proteinGoal:
         body.proteinGoal !== undefined ? Number(body.proteinGoal) : undefined,
+      weeklyProteinGoal:
+        body.weeklyProteinGoal !== undefined ? Number(body.weeklyProteinGoal) : undefined,
       fiberGoal:
         body.fiberGoal !== undefined ? Number(body.fiberGoal) : undefined,
       unit: body.unit,
-      startWeight:
-        body.startWeight !== undefined
-          ? body.startWeight === ""
-            ? null
-            : Number(body.startWeight)
-          : undefined,
       startWaist:
         body.startWaist !== undefined
           ? body.startWaist === ""
             ? null
             : Number(body.startWaist)
           : undefined,
+      startHips:
+        body.startHips !== undefined
+          ? body.startHips === ""
+            ? null
+            : Number(body.startHips)
+          : undefined,
       startChest:
         body.startChest !== undefined
           ? body.startChest === ""
             ? null
             : Number(body.startChest)
-          : undefined,
-      startArms:
-        body.startArms !== undefined
-          ? body.startArms === ""
-            ? null
-            : Number(body.startArms)
           : undefined,
     },
     create: {

@@ -8,18 +8,18 @@ datasource db {
 }
 
 model Profile {
-  id          Int      @id @default(1)
-  name        String   @default("Gabriel")
-  age         Int      @default(30)
-  proteinGoal Int      @default(120)
-  fiberGoal   Int      @default(25)
-  unit        String   @default("lbs")
-  startWeight Float?
-  startWaist  Float?
-  startChest  Float?
-  startArms   Float?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                Int      @id @default(1)
+  name              String   @default("Gabriel")
+  age               Int      @default(30)
+  proteinGoal       Int      @default(120)
+  weeklyProteinGoal Int      @default(0)
+  fiberGoal         Int      @default(25)
+  unit              String   @default("lbs")
+  startWaist        Float?
+  startHips         Float?
+  startChest        Float?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Phase {
@@ -83,10 +83,9 @@ model QuestionAnswer {
 model Checkpoint {
   id        Int      @id @default(autoincrement())
   date      String
-  weight    Float?
   waist     Float?
+  hips      Float?
   chest     Float?
-  arms      Float?
   note      String?
   createdAt DateTime @default(now())
 }

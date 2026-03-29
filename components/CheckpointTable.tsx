@@ -28,20 +28,18 @@ export default function CheckpointTable({
   profile,
 }: CheckpointTableProps) {
   const hasBaseline =
-    profile.startWeight ||
     profile.startWaist ||
-    profile.startChest ||
-    profile.startArms;
+    profile.startHips ||
+    profile.startChest;
 
-  const cols = ["Date", "Weight", "Waist", "Chest", "Arms"];
+  const cols = ["Date", "Waist", "Hips", "Chest"];
 
   const baseline = hasBaseline
     ? {
         date: "Baseline",
-        weight: profile.startWeight,
         waist: profile.startWaist,
+        hips: profile.startHips,
         chest: profile.startChest,
-        arms: profile.startArms,
         note: null,
         isBaseline: true,
       }
@@ -76,10 +74,9 @@ export default function CheckpointTable({
               <td className="py-2 pr-3 text-accent font-semibold whitespace-nowrap">
                 Baseline
               </td>
-              <td className="py-2 pr-3 text-app-text">{baseline.weight ?? "—"}</td>
               <td className="py-2 pr-3 text-app-text">{baseline.waist ?? "—"}</td>
+              <td className="py-2 pr-3 text-app-text">{baseline.hips ?? "—"}</td>
               <td className="py-2 pr-3 text-app-text">{baseline.chest ?? "—"}</td>
-              <td className="py-2 pr-3 text-app-text">{baseline.arms ?? "—"}</td>
             </tr>
           )}
           {checkpoints.map((cp) => (
@@ -88,14 +85,12 @@ export default function CheckpointTable({
                 {formatDisplayDate(cp.date)}
               </td>
               <td className="py-2 pr-3">
-                {cp.weight != null ? (
+                {cp.waist != null ? (
                   <>
-                    <span className="text-app-text">{cp.weight}</span>
+                    <span className="text-app-text">{cp.waist}"</span>
                     {baseline && (
-                      <span
-                        className={`text-xs ml-1 ${deltaColor(cp.weight, baseline.weight)}`}
-                      >
-                        {delta(cp.weight, baseline.weight)}
+                      <span className={`text-xs ml-1 ${deltaColor(cp.waist, baseline.waist)}`}>
+                        {delta(cp.waist, baseline.waist)}
                       </span>
                     )}
                   </>
@@ -104,14 +99,12 @@ export default function CheckpointTable({
                 )}
               </td>
               <td className="py-2 pr-3">
-                {cp.waist != null ? (
+                {cp.hips != null ? (
                   <>
-                    <span className="text-app-text">{cp.waist}</span>
+                    <span className="text-app-text">{cp.hips}"</span>
                     {baseline && (
-                      <span
-                        className={`text-xs ml-1 ${deltaColor(cp.waist, baseline.waist)}`}
-                      >
-                        {delta(cp.waist, baseline.waist)}
+                      <span className={`text-xs ml-1 ${deltaColor(cp.hips, baseline.hips)}`}>
+                        {delta(cp.hips, baseline.hips)}
                       </span>
                     )}
                   </>
@@ -122,28 +115,10 @@ export default function CheckpointTable({
               <td className="py-2 pr-3">
                 {cp.chest != null ? (
                   <>
-                    <span className="text-app-text">{cp.chest}</span>
+                    <span className="text-app-text">{cp.chest}"</span>
                     {baseline && (
-                      <span
-                        className={`text-xs ml-1 ${deltaColor(cp.chest, baseline.chest)}`}
-                      >
+                      <span className={`text-xs ml-1 ${deltaColor(cp.chest, baseline.chest)}`}>
                         {delta(cp.chest, baseline.chest)}
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-muted">—</span>
-                )}
-              </td>
-              <td className="py-2 pr-3">
-                {cp.arms != null ? (
-                  <>
-                    <span className="text-app-text">{cp.arms}</span>
-                    {baseline && (
-                      <span
-                        className={`text-xs ml-1 ${deltaColor(cp.arms, baseline.arms)}`}
-                      >
-                        {delta(cp.arms, baseline.arms)}
                       </span>
                     )}
                   </>

@@ -13,10 +13,9 @@ export async function POST(request: NextRequest) {
   const checkpoint = await db.checkpoint.create({
     data: {
       date: body.date,
-      weight: body.weight != null && body.weight !== "" ? Number(body.weight) : null,
       waist: body.waist != null && body.waist !== "" ? Number(body.waist) : null,
+      hips: body.hips != null && body.hips !== "" ? Number(body.hips) : null,
       chest: body.chest != null && body.chest !== "" ? Number(body.chest) : null,
-      arms: body.arms != null && body.arms !== "" ? Number(body.arms) : null,
       note: body.note ?? null,
     },
   });

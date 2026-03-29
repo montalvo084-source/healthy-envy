@@ -16,10 +16,9 @@ export default function CheckpointsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   // Form state
-  const [weight, setWeight] = useState("");
   const [waist, setWaist] = useState("");
+  const [hips, setHips] = useState("");
   const [chest, setChest] = useState("");
-  const [arms, setArms] = useState("");
   const [note, setNote] = useState("");
 
   async function loadCheckpoints() {
@@ -33,7 +32,7 @@ export default function CheckpointsPage() {
   }, []);
 
   async function handleSave() {
-    if (!weight && !waist && !chest && !arms) {
+    if (!waist && !hips && !chest) {
       showToast("Enter at least one measurement", "error");
       return;
     }
@@ -44,19 +43,17 @@ export default function CheckpointsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: todayStr(),
-          weight: weight || null,
           waist: waist || null,
+          hips: hips || null,
           chest: chest || null,
-          arms: arms || null,
           note: note || null,
         }),
       });
       if (!res.ok) throw new Error("Failed to save");
       showToast("Checkpoint saved!", "success");
-      setWeight("");
       setWaist("");
+      setHips("");
       setChest("");
-      setArms("");
       setNote("");
       loadCheckpoints();
       router.push("/progress");
@@ -98,12 +95,11 @@ export default function CheckpointsPage() {
 
       {/* Form */}
       <div className="bg-surface rounded-xl border border-border p-4 flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Weight", value: weight, set: setWeight, unit: "lbs" },
             { label: "Waist", value: waist, set: setWaist, unit: "in" },
+            { label: "Hips", value: hips, set: setHips, unit: "in" },
             { label: "Chest", value: chest, set: setChest, unit: "in" },
-            { label: "Arms", value: arms, set: setArms, unit: "in" },
           ].map(({ label, value, set, unit }) => (
             <div key={label} className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
@@ -173,27 +169,19 @@ export default function CheckpointsPage() {
                 </button>
               </div>
               <div className="flex flex-wrap gap-3 text-sm">
-                {cp.weight && (
-                  <span className="text-secondary">
-                    ⚖️ <span className="text-app-text font-semibold">{cp.weight}</span>
-                  </span>
-                )}
                 {cp.waist && (
                   <span className="text-secondary">
-                    📏 Waist{" "}
-                    <span className="text-app-text font-semibold">{cp.waist}</span>
+                    📏 Waist <span className="text-app-text font-semibold">{cp.waist}"</span>
+                  </span>
+                )}
+                {cp.hips && (
+                  <span className="text-secondary">
+                    Hips <span className="text-app-text font-semibold">{cp.hips}"</span>
                   </span>
                 )}
                 {cp.chest && (
                   <span className="text-secondary">
-                    Chest{" "}
-                    <span className="text-app-text font-semibold">{cp.chest}</span>
-                  </span>
-                )}
-                {cp.arms && (
-                  <span className="text-secondary">
-                    Arms{" "}
-                    <span className="text-app-text font-semibold">{cp.arms}</span>
+                    Chest <span className="text-app-text font-semibold">{cp.chest}"</span>
                   </span>
                 )}
               </div>

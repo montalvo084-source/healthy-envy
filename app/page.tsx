@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Phase, DailyLog, Profile } from "@/lib/types";
 import {
@@ -9,6 +9,7 @@ import {
   calcPhaseDay,
   calcProteinTotal,
   todayStr,
+  formatDate,
 } from "@/lib/calculations";
 import { useProteinSources } from "@/lib/protein-sources-context";
 import ProgressBar from "@/components/ProgressBar";
@@ -55,6 +56,26 @@ export default function Dashboard() {
   const avgProtein = calcAvgProtein(logs, 14, sources);
   const proteinGoal = profile?.proteinGoal ?? 120;
 
+  // Weekly protein calc (Mon–Sun)
+  const weekStart = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return formatDate(d);
+  })();
+  const weeklyLogs = logs.filter((l) => l.date >= weekStart);
+  const weeklyProtein = Math.round(
+    weeklyLogs.reduce((sum, l) => sum + calcProteinTotal(l.proteinEntries ?? [], sources), 0)
+  );
+  const weeklyGoal =
+    (profile?.weeklyProteinGoal ?? 0) > 0
+      ? profile!.weeklyProteinGoal
+      : proteinGoal * 7;
+  const weeklyRemaining = Math.max(0, weeklyGoal - weeklyProtein);
+  const weeklyPct = Math.min(100, (weeklyProtein / weeklyGoal) * 100);
+
   const phaseDay = activePhase
     ? calcPhaseDay(activePhase.startDate.split("T")[0])
     : 0;
@@ -80,9 +101,8 @@ export default function Dashboard() {
 
       {/* Active Phase Banner */}
       {activePhase ? (
-        <Link
-          href="/phases"
-          className="block bg-surface rounded-xl border border-border p-4 hover:border-accent/30 transition-colors"
+        <div
+          className="bg-surface rounded-xl border border-border p-4"
           style={{ borderLeftColor: activePhase.color, borderLeftWidth: 3 }}
         >
           <div className="flex items-start justify-between gap-2 mb-2">
@@ -96,12 +116,15 @@ export default function Dashboard() {
                 remaining
               </p>
             </div>
-            <span className="text-xs font-bold text-secondary shrink-0">
-              {Math.round((phaseDay / activePhase.duration) * 100)}% →
-            </span>
+            <Link
+              href={`/phases/${activePhase.id}`}
+              className="text-xs font-bold text-secondary hover:text-accent transition-colors shrink-0 px-2 py-1 rounded-lg hover:bg-border"
+            >
+              Edit
+            </Link>
           </div>
           <ProgressBar value={phaseDay} max={activePhase.duration} color={activePhase.color} />
-        </Link>
+        </div>
       ) : (
         <Link
           href="/phases"
@@ -133,6 +156,14 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {/* Weekly Protein Widget */}
+      <WeeklyProteinWidget
+        logged={weeklyProtein}
+        goal={weeklyGoal}
+        remaining={weeklyRemaining}
+        pct={weeklyPct}
+      />
 
       {/* Log Today Button */}
       <Link
@@ -180,6 +211,70 @@ export default function Dashboard() {
       >
         📏 Record a Measurement Checkpoint
       </Link>
+    </div>
+  );
+}
+
+function WeeklyProteinWidget({
+  logged,
+  goal,
+  remaining,
+  pct,
+}: {
+  logged: number;
+  goal: number;
+  remaining: number;
+  pct: number;
+}) {
+  const [barWidth, setBarWidth] = useState(0);
+  const prevLogged = useRef(logged);
+
+  useEffect(() => {
+    // Animate on mount and whenever logged changes
+    const t = setTimeout(() => setBarWidth(pct), 60);
+    prevLogged.current = logged;
+    return () => clearTimeout(t);
+  }, [pct, logged]);
+
+  const done = remaining === 0;
+
+  return (
+    <div className="bg-surface rounded-xl border border-border p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold text-app-text uppercase tracking-wide">
+          🥩 Protein This Week
+        </h2>
+        <Link
+          href="/settings"
+          className="text-xs text-secondary hover:text-accent transition-colors"
+        >
+          Set goal
+        </Link>
+      </div>
+
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <span className="text-3xl font-extrabold text-app-text">{logged}</span>
+          <span className="text-secondary text-sm ml-1">g</span>
+        </div>
+        {done ? (
+          <span className="text-success text-sm font-bold">Goal hit! 🎉</span>
+        ) : (
+          <span className="text-secondary text-sm">
+            <span className="text-app-text font-bold">{remaining}g</span> left
+          </span>
+        )}
+      </div>
+
+      {/* Animated bar */}
+      <div className="h-3 bg-border rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full ${done ? "bg-success" : "bg-accent"}`}
+          style={{ width: `${barWidth}%`, transition: "width 0.7s cubic-bezier(0.34,1.56,0.64,1)" }}
+        />
+      </div>
+
+      <p className="text-xs text-muted text-right -mt-1">{logged}g / {goal}g</p>
     </div>
   );
 }

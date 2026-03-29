@@ -15,12 +15,12 @@ export interface Profile {
   name: string;
   age: number;
   proteinGoal: number;
+  weeklyProteinGoal: number;
   fiberGoal: number;
   unit: string;
-  startWeight: number | null;
   startWaist: number | null;
+  startHips: number | null;
   startChest: number | null;
-  startArms: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -82,10 +82,9 @@ export interface DailyLog {
 export interface Checkpoint {
   id: number;
   date: string;
-  weight: number | null;
   waist: number | null;
+  hips: number | null;
   chest: number | null;
-  arms: number | null;
   note: string | null;
   createdAt: string;
 }

@@ -39,11 +39,11 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [proteinGoal, setProteinGoal] = useState("");
+  const [weeklyProteinGoal, setWeeklyProteinGoal] = useState("");
   const [unit, setUnit] = useState("lbs");
-  const [startWeight, setStartWeight] = useState("");
   const [startWaist, setStartWaist] = useState("");
+  const [startHips, setStartHips] = useState("");
   const [startChest, setStartChest] = useState("");
-  const [startArms, setStartArms] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -61,11 +61,11 @@ export default function SettingsPage() {
       setName(profile.name);
       setAge(String(profile.age));
       setProteinGoal(String(profile.proteinGoal));
+      setWeeklyProteinGoal(profile.weeklyProteinGoal > 0 ? String(profile.weeklyProteinGoal) : "");
       setUnit(profile.unit);
-      setStartWeight(profile.startWeight != null ? String(profile.startWeight) : "");
       setStartWaist(profile.startWaist != null ? String(profile.startWaist) : "");
+      setStartHips(profile.startHips != null ? String(profile.startHips) : "");
       setStartChest(profile.startChest != null ? String(profile.startChest) : "");
-      setStartArms(profile.startArms != null ? String(profile.startArms) : "");
 
       setLogCount(logs.length);
       setPhaseCount(phases.length);
@@ -180,11 +180,11 @@ export default function SettingsPage() {
           name,
           age,
           proteinGoal,
+          weeklyProteinGoal: weeklyProteinGoal || "0",
           unit,
-          startWeight,
           startWaist,
+          startHips,
           startChest,
-          startArms,
         }),
       });
       if (!res.ok) throw new Error("Failed to save");
@@ -268,31 +268,43 @@ export default function SettingsPage() {
               className="w-full bg-bg border border-border rounded-lg px-3 py-3 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
             />
           </div>
-          <div className="flex flex-col gap-1.5 w-28">
+          <div className="flex flex-col gap-1.5 flex-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
-              Unit
+              Weekly Protein Goal (g)
             </label>
-            <select
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
+            <input
+              type="number"
+              value={weeklyProteinGoal}
+              onChange={(e) => setWeeklyProteinGoal(e.target.value)}
+              placeholder={proteinGoal ? `${Number(proteinGoal) * 7} (auto)` : "auto"}
               className="w-full bg-bg border border-border rounded-lg px-3 py-3 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
-            >
-              <option value="lbs">lbs</option>
-              <option value="kg">kg</option>
-            </select>
+            />
           </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5 w-28">
+          <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Unit
+          </label>
+          <select
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            className="w-full bg-bg border border-border rounded-lg px-3 py-3 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
+          >
+            <option value="lbs">lbs</option>
+            <option value="kg">kg</option>
+          </select>
         </div>
 
         <div className="border-t border-border pt-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-secondary mb-3">
             Starting Measurements (baseline)
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Weight", value: startWeight, set: setStartWeight },
               { label: "Waist", value: startWaist, set: setStartWaist },
+              { label: "Hips", value: startHips, set: setStartHips },
               { label: "Chest", value: startChest, set: setStartChest },
-              { label: "Arms", value: startArms, set: setStartArms },
             ].map(({ label, value, set }) => (
               <div key={label} className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
