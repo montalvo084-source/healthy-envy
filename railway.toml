@@ -1,2 +1,5 @@
+[build]
+buildCommand = "prisma generate && prisma db push --accept-data-loss && next build"
+
 [deploy]
-startCommand = "prisma db push --accept-data-loss && next start"
+startCommand = "next start"
