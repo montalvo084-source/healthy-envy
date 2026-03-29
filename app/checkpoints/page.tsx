@@ -14,12 +14,20 @@ export default function CheckpointsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
-  // Form state
+  // New checkpoint form state
   const [waist, setWaist] = useState("");
   const [hips, setHips] = useState("");
   const [chest, setChest] = useState("");
   const [note, setNote] = useState("");
+
+  // Edit form state
+  const [editWaist, setEditWaist] = useState("");
+  const [editHips, setEditHips] = useState("");
+  const [editChest, setEditChest] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editDate, setEditDate] = useState("");
 
   async function loadCheckpoints() {
     const res = await fetch("/api/checkpoints");
@@ -64,6 +72,42 @@ export default function CheckpointsPage() {
     }
   }
 
+  function startEdit(cp: Checkpoint) {
+    setEditingId(cp.id);
+    setEditDate(cp.date);
+    setEditWaist(cp.waist != null ? String(cp.waist) : "");
+    setEditHips(cp.hips != null ? String(cp.hips) : "");
+    setEditChest(cp.chest != null ? String(cp.chest) : "");
+    setEditNote(cp.note ?? "");
+    setDeleteConfirmId(null);
+  }
+
+  async function handleUpdate() {
+    if (!editingId) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/checkpoints/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: editDate,
+          waist: editWaist || null,
+          hips: editHips || null,
+          chest: editChest || null,
+          note: editNote || null,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      showToast("Checkpoint updated!", "success");
+      setEditingId(null);
+      loadCheckpoints();
+    } catch {
+      showToast("Something went wrong", "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleDelete(id: number) {
     if (deleteConfirmId !== id) {
       setDeleteConfirmId(id);
@@ -93,17 +137,17 @@ export default function CheckpointsPage() {
         {formatDisplayDate(todayStr())} — all fields optional
       </p>
 
-      {/* Form */}
+      {/* New checkpoint form */}
       <div className="bg-surface rounded-xl border border-border p-4 flex flex-col gap-4">
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Waist", value: waist, set: setWaist, unit: "in" },
-            { label: "Hips", value: hips, set: setHips, unit: "in" },
-            { label: "Chest", value: chest, set: setChest, unit: "in" },
-          ].map(({ label, value, set, unit }) => (
+            { label: "Waist", value: waist, set: setWaist },
+            { label: "Hips", value: hips, set: setHips },
+            { label: "Chest", value: chest, set: setChest },
+          ].map(({ label, value, set }) => (
             <div key={label} className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
-                {label} ({unit})
+                {label} (in)
               </label>
               <input
                 type="number"
@@ -152,41 +196,120 @@ export default function CheckpointsPage() {
               key={cp.id}
               className="bg-surface rounded-xl border border-border p-4"
             >
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <p className="font-bold text-app-text text-sm">
-                  {formatDisplayDate(cp.date)}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(cp.id)}
-                  className={`text-xs font-bold transition-colors ${
-                    deleteConfirmId === cp.id
-                      ? "text-danger"
-                      : "text-muted hover:text-danger"
-                  }`}
-                >
-                  {deleteConfirmId === cp.id ? "Confirm delete?" : "Delete"}
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-3 text-sm">
-                {cp.waist && (
-                  <span className="text-secondary">
-                    📏 Waist <span className="text-app-text font-semibold">{cp.waist}"</span>
-                  </span>
-                )}
-                {cp.hips && (
-                  <span className="text-secondary">
-                    Hips <span className="text-app-text font-semibold">{cp.hips}"</span>
-                  </span>
-                )}
-                {cp.chest && (
-                  <span className="text-secondary">
-                    Chest <span className="text-app-text font-semibold">{cp.chest}"</span>
-                  </span>
-                )}
-              </div>
-              {cp.note && (
-                <p className="text-secondary text-xs mt-2 italic">{cp.note}</p>
+              {editingId === cp.id ? (
+                /* Edit form */
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                      className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: "Waist", value: editWaist, set: setEditWaist },
+                      { label: "Hips", value: editHips, set: setEditHips },
+                      { label: "Chest", value: editChest, set: setEditChest },
+                    ].map(({ label, value, set }) => (
+                      <div key={label} className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                          {label} (in)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={value}
+                          onChange={(e) => set(e.target.value)}
+                          placeholder="—"
+                          className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                      Notes
+                    </label>
+                    <textarea
+                      value={editNote}
+                      onChange={(e) => setEditNote(e.target.value)}
+                      rows={2}
+                      className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent transition-colors resize-none"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(null)}
+                      className="flex-1 py-2 rounded-lg border border-border text-secondary font-bold text-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleUpdate}
+                      disabled={saving}
+                      className="flex-1 py-2 rounded-lg bg-accent text-bg font-bold text-sm disabled:opacity-50"
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Display view */
+                <>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <p className="font-bold text-app-text text-sm">
+                      {formatDisplayDate(cp.date)}
+                    </p>
+                    <div className="flex gap-2 items-center">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(cp)}
+                        className="text-xs font-bold text-secondary hover:text-accent transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(cp.id)}
+                        className={`text-xs font-bold transition-colors ${
+                          deleteConfirmId === cp.id
+                            ? "text-danger"
+                            : "text-muted hover:text-danger"
+                        }`}
+                      >
+                        {deleteConfirmId === cp.id ? "Confirm?" : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-sm">
+                    {cp.waist && (
+                      <span className="text-secondary">
+                        📏 Waist <span className="text-app-text font-semibold">{cp.waist}"</span>
+                      </span>
+                    )}
+                    {cp.hips && (
+                      <span className="text-secondary">
+                        Hips <span className="text-app-text font-semibold">{cp.hips}"</span>
+                      </span>
+                    )}
+                    {cp.chest && (
+                      <span className="text-secondary">
+                        Chest <span className="text-app-text font-semibold">{cp.chest}"</span>
+                      </span>
+                    )}
+                  </div>
+                  {cp.note && (
+                    <p className="text-secondary text-xs mt-2 italic">{cp.note}</p>
+                  )}
+                </>
               )}
             </div>
           ))}
