@@ -14,7 +14,7 @@ import { useProteinSources } from "@/lib/protein-sources-context";
 import ChartProtein from "@/components/ChartProtein";
 
 export default function Dashboard() {
-  const { sources } = useProteinSources();
+  const { sources, loaded: sourcesLoaded } = useProteinSources();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,11 +32,12 @@ export default function Dashboard() {
     load();
   }, []);
 
-  if (loading) {
+  if (loading || !sourcesLoaded) {
     return (
       <div className="py-6 flex flex-col gap-4">
         <div className="h-8 bg-surface rounded-lg animate-pulse w-48" />
         <div className="h-20 bg-surface rounded-xl animate-pulse" />
+        <div className="h-24 bg-surface rounded-xl animate-pulse" />
         <div className="h-24 bg-surface rounded-xl animate-pulse" />
         <div className="h-48 bg-surface rounded-xl animate-pulse" />
       </div>
@@ -69,6 +70,13 @@ export default function Dashboard() {
       : proteinGoal * 7;
   const weeklyRemaining = Math.max(0, weeklyGoal - weeklyProtein);
   const weeklyPct = Math.min(100, (weeklyProtein / weeklyGoal) * 100);
+
+  // Today's protein
+  const todayProtein = Math.round(
+    calcProteinTotal(todayLog?.proteinEntries ?? [], sources)
+  );
+  const todayRemaining = Math.max(0, proteinGoal - todayProtein);
+  const todayPct = Math.min(100, (todayProtein / proteinGoal) * 100);
 
   return (
     <div className="py-6 flex flex-col gap-5">
@@ -116,6 +124,14 @@ export default function Dashboard() {
         pct={weeklyPct}
       />
 
+      {/* Today Protein Widget */}
+      <TodayProteinWidget
+        logged={todayProtein}
+        goal={proteinGoal}
+        remaining={todayRemaining}
+        pct={todayPct}
+      />
+
       {/* Log Today Button */}
       <Link
         href="/log"
@@ -131,9 +147,9 @@ export default function Dashboard() {
       {/* Today's Log Summary */}
       {todayLog && (
         <div className="flex gap-4 px-1">
-          {calcProteinTotal(todayLog.proteinEntries ?? [], sources) > 0 && (
+          {todayProtein > 0 && (
             <span className="text-sm text-secondary">
-              🥩 <span className="text-app-text font-semibold">{Math.round(calcProteinTotal(todayLog.proteinEntries ?? [], sources))}g</span> protein
+              🥩 <span className="text-app-text font-semibold">{todayProtein}g</span> protein
             </span>
           )}
           {todayLog.fiberGrams != null && todayLog.fiberGrams > 0 && (
@@ -199,6 +215,66 @@ function WeeklyProteinWidget({
           className="text-xs text-secondary hover:text-accent transition-colors"
         >
           Set goal
+        </Link>
+      </div>
+
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <span className="text-3xl font-extrabold text-app-text">{logged}</span>
+          <span className="text-secondary text-sm ml-1">g</span>
+        </div>
+        {done ? (
+          <span className="text-success text-sm font-bold">Goal hit! 🎉</span>
+        ) : (
+          <span className="text-secondary text-sm">
+            <span className="text-app-text font-bold">{remaining}g</span> left
+          </span>
+        )}
+      </div>
+
+      <div className="h-3 bg-border rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full ${done ? "bg-success" : "bg-accent"}`}
+          style={{ width: `${barWidth}%`, transition: "width 0.7s cubic-bezier(0.34,1.56,0.64,1)" }}
+        />
+      </div>
+
+      <p className="text-xs text-muted text-right -mt-1">{logged}g / {goal}g</p>
+    </div>
+  );
+}
+
+function TodayProteinWidget({
+  logged,
+  goal,
+  remaining,
+  pct,
+}: {
+  logged: number;
+  goal: number;
+  remaining: number;
+  pct: number;
+}) {
+  const [barWidth, setBarWidth] = useState(0);
+
+  useEffect(() => {
+    const t = setTimeout(() => setBarWidth(pct), 120);
+    return () => clearTimeout(t);
+  }, [pct]);
+
+  const done = remaining === 0;
+
+  return (
+    <div className="bg-surface rounded-xl border border-border p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold text-app-text uppercase tracking-wide">
+          🥩 Protein Today
+        </h2>
+        <Link
+          href="/log"
+          className="text-xs text-secondary hover:text-accent transition-colors"
+        >
+          Log now
         </Link>
       </div>
 

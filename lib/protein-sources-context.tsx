@@ -5,11 +5,13 @@ import type { ProteinSource } from "@/lib/types";
 
 interface ProteinSourcesContextValue {
   sources: ProteinSource[];
+  loaded: boolean;
   reload: () => Promise<void>;
 }
 
 const ProteinSourcesContext = createContext<ProteinSourcesContextValue>({
   sources: [],
+  loaded: false,
   reload: async () => {},
 });
 
@@ -19,10 +21,12 @@ export function ProteinSourcesProvider({
   children: React.ReactNode;
 }) {
   const [sources, setSources] = useState<ProteinSource[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   async function load() {
     const res = await fetch("/api/protein-sources");
     if (res.ok) setSources(await res.json());
+    setLoaded(true);
   }
 
   useEffect(() => {
@@ -30,7 +34,7 @@ export function ProteinSourcesProvider({
   }, []);
 
   return (
-    <ProteinSourcesContext.Provider value={{ sources, reload: load }}>
+    <ProteinSourcesContext.Provider value={{ sources, loaded, reload: load }}>
       {children}
     </ProteinSourcesContext.Provider>
   );
