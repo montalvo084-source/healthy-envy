@@ -7,6 +7,7 @@ const tabs = [
   { href: "/", emoji: "📊", label: "Home" },
   { href: "/history", emoji: "📋", label: "History" },
   { href: "/progress", emoji: "📏", label: "Measurements" },
+  { href: "/gut", emoji: "🦠", label: "Gut" },
   { href: "/settings", emoji: "⚙️", label: "Settings" },
 ];
 
