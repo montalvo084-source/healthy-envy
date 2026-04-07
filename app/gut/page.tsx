@@ -198,6 +198,7 @@ function QuickAdd({
 
 function InlineEdit({
   initialValue,
+  initialNotes,
   onSave,
   onCancel,
   onDelete,
@@ -207,7 +208,8 @@ function InlineEdit({
   saveClass,
 }: {
   initialValue: string;
-  onSave: (value: string) => void;
+  initialNotes: string;
+  onSave: (value: string, notes: string) => void;
   onCancel: () => void;
   onDelete: () => void;
   deleteConfirm: boolean;
@@ -216,6 +218,7 @@ function InlineEdit({
   saveClass: string;
 }) {
   const [value, setValue] = useState(initialValue);
+  const [notes, setNotes] = useState(initialNotes);
   return (
     <div className="flex flex-col gap-2 p-3">
       <input
@@ -223,8 +226,15 @@ function InlineEdit({
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") onSave(value); if (e.key === "Escape") onCancel(); }}
+        onKeyDown={(e) => { if (e.key === "Escape") onCancel(); }}
         className={`w-full bg-bg border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none transition-colors ${inputClass}`}
+      />
+      <input
+        type="text"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Note (optional, e.g. cooked only)"
+        className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-secondary text-xs focus:outline-none focus:border-accent transition-colors"
       />
       <div className="flex gap-2">
         <button
@@ -239,7 +249,7 @@ function InlineEdit({
         <button type="button" onClick={onCancel} className="flex-1 py-1.5 rounded-lg border border-border text-secondary font-bold text-xs">Cancel</button>
         <button
           type="button"
-          onClick={() => onSave(value)}
+          onClick={() => onSave(value, notes)}
           disabled={saving || !value.trim()}
           className={`flex-1 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50 ${saveClass}`}
         >
@@ -285,6 +295,7 @@ export default function GutPage() {
   const [savingFood, setSavingFood] = useState(false);
   const [editingFood, setEditingFood] = useState<Food | null>(null);
   const [editFoodName, setEditFoodName] = useState("");
+  const [editFoodNotes, setEditFoodNotes] = useState("");
   const [deleteFoodConfirmId, setDeleteFoodConfirmId] = useState<number | null>(null);
 
   // Strategies
@@ -294,6 +305,7 @@ export default function GutPage() {
   const [savingStrategy, setSavingStrategy] = useState(false);
   const [editingStrategy, setEditingStrategy] = useState<Strategy | null>(null);
   const [editStrategyText, setEditStrategyText] = useState("");
+  const [editStrategyNotes, setEditStrategyNotes] = useState("");
   const [deleteStrategyConfirmId, setDeleteStrategyConfirmId] = useState<number | null>(null);
 
   async function loadPhase() {
@@ -395,14 +407,14 @@ export default function GutPage() {
     finally { setSavingFood(false); }
   }
 
-  async function handleUpdateFood(name: string) {
+  async function handleUpdateFood(name: string, notes: string) {
     if (!editingFood) return;
     setSavingFood(true);
     try {
       await fetch(`/api/gut/foods/${editingFood.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, category: editingFood.category }),
+        body: JSON.stringify({ name, category: editingFood.category, notes: notes || null }),
       });
       showToast("Updated ✓", "success");
       setEditingFood(null);
@@ -446,14 +458,14 @@ export default function GutPage() {
     finally { setSavingStrategy(false); }
   }
 
-  async function handleUpdateStrategy(text: string) {
+  async function handleUpdateStrategy(text: string, notes: string) {
     if (!editingStrategy) return;
     setSavingStrategy(true);
     try {
       await fetch(`/api/gut/strategies/${editingStrategy.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, notes: notes || null }),
       });
       showToast("Updated ✓", "success");
       setEditingStrategy(null);
@@ -607,6 +619,7 @@ export default function GutPage() {
                 {editingFood?.id === food.id ? (
                   <InlineEdit
                     initialValue={editFoodName}
+                    initialNotes={editFoodNotes}
                     onSave={handleUpdateFood}
                     onCancel={() => setEditingFood(null)}
                     onDelete={() => handleDeleteFood(food.id)}
@@ -618,12 +631,15 @@ export default function GutPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => { setEditingFood(food); setEditFoodName(food.name); setDeleteFoodConfirmId(null); }}
-                    className="w-full text-left flex items-center gap-2.5 px-3 py-3"
+                    onClick={() => { setEditingFood(food); setEditFoodName(food.name); setEditFoodNotes(food.notes ?? ""); setDeleteFoodConfirmId(null); }}
+                    className="w-full text-left flex flex-col px-3 py-3 gap-0.5"
                   >
-                    <span className="text-danger text-sm shrink-0">✕</span>
-                    <span className="text-app-text text-sm font-medium flex-1">{food.name}</span>
-                    <span className="text-muted text-xs">edit</span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-danger text-sm shrink-0">✕</span>
+                      <span className="text-app-text text-sm font-medium flex-1">{food.name}</span>
+                      <span className="text-muted text-xs">edit</span>
+                    </div>
+                    {food.notes && <p className="text-muted text-xs pl-5">{food.notes}</p>}
                   </button>
                 )}
               </div>
@@ -667,6 +683,7 @@ export default function GutPage() {
                 {editingFood?.id === food.id ? (
                   <InlineEdit
                     initialValue={editFoodName}
+                    initialNotes={editFoodNotes}
                     onSave={handleUpdateFood}
                     onCancel={() => setEditingFood(null)}
                     onDelete={() => handleDeleteFood(food.id)}
@@ -678,12 +695,15 @@ export default function GutPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => { setEditingFood(food); setEditFoodName(food.name); setDeleteFoodConfirmId(null); }}
-                    className="w-full text-left flex items-center gap-2.5 px-3 py-3"
+                    onClick={() => { setEditingFood(food); setEditFoodName(food.name); setEditFoodNotes(food.notes ?? ""); setDeleteFoodConfirmId(null); }}
+                    className="w-full text-left flex flex-col px-3 py-3 gap-0.5"
                   >
-                    <span className="text-success text-sm shrink-0">✓</span>
-                    <span className="text-app-text text-sm font-medium flex-1">{food.name}</span>
-                    <span className="text-muted text-xs">edit</span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-success text-sm shrink-0">✓</span>
+                      <span className="text-app-text text-sm font-medium flex-1">{food.name}</span>
+                      <span className="text-muted text-xs">edit</span>
+                    </div>
+                    {food.notes && <p className="text-muted text-xs pl-5">{food.notes}</p>}
                   </button>
                 )}
               </div>
@@ -727,6 +747,7 @@ export default function GutPage() {
                 {editingStrategy?.id === strategy.id ? (
                   <InlineEdit
                     initialValue={editStrategyText}
+                    initialNotes={editStrategyNotes}
                     onSave={handleUpdateStrategy}
                     onCancel={() => setEditingStrategy(null)}
                     onDelete={() => handleDeleteStrategy(strategy.id)}
@@ -738,12 +759,15 @@ export default function GutPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => { setEditingStrategy(strategy); setEditStrategyText(strategy.text); setDeleteStrategyConfirmId(null); }}
-                    className="w-full text-left flex items-center gap-2.5 px-3 py-3"
+                    onClick={() => { setEditingStrategy(strategy); setEditStrategyText(strategy.text); setEditStrategyNotes(strategy.notes ?? ""); setDeleteStrategyConfirmId(null); }}
+                    className="w-full text-left flex flex-col px-3 py-3 gap-0.5"
                   >
-                    <span className="text-purple text-xs shrink-0">⬡</span>
-                    <span className="text-app-text text-sm flex-1">{strategy.text}</span>
-                    <span className="text-muted text-xs">edit</span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-purple text-xs shrink-0">⬡</span>
+                      <span className="text-app-text text-sm flex-1">{strategy.text}</span>
+                      <span className="text-muted text-xs">edit</span>
+                    </div>
+                    {strategy.notes && <p className="text-muted text-xs pl-4">{strategy.notes}</p>}
                   </button>
                 )}
               </div>
