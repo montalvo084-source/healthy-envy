@@ -122,13 +122,15 @@ function QuickAdd({
   buttonLabel,
 }: {
   placeholder: string;
-  onAdd: (value: string) => void;
+  onAdd: (value: string, notes: string) => void;
   onCancel: () => void;
   saving: boolean;
   accentClass: string;
   buttonLabel: string;
 }) {
   const [value, setValue] = useState("");
+  const [notes, setNotes] = useState("");
+  const [showNotes, setShowNotes] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -136,35 +138,58 @@ function QuickAdd({
   }, []);
 
   function submit() {
-    if (value.trim()) onAdd(value.trim());
+    if (value.trim()) onAdd(value.trim(), notes.trim());
   }
 
   return (
-    <div className="flex gap-2 p-3 items-center">
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") onCancel(); }}
-        placeholder={placeholder}
-        className="flex-1 bg-bg border border-border rounded-lg px-3 py-2.5 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
-      />
-      <button
-        type="button"
-        onClick={onCancel}
-        className="text-xs text-muted hover:text-secondary font-bold px-2 py-2.5"
-      >
-        ✕
-      </button>
-      <button
-        type="button"
-        onClick={submit}
-        disabled={saving || !value.trim()}
-        className={`py-2.5 px-3 rounded-lg text-xs font-extrabold transition-colors disabled:opacity-40 whitespace-nowrap ${accentClass}`}
-      >
-        {saving ? "..." : buttonLabel}
-      </button>
+    <div className="flex flex-col gap-2 p-3">
+      <div className="flex gap-2 items-center">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !showNotes) submit(); if (e.key === "Escape") onCancel(); }}
+          placeholder={placeholder}
+          className="flex-1 bg-bg border border-border rounded-lg px-3 py-2.5 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
+        />
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-xs text-muted hover:text-secondary font-bold px-2 py-2.5"
+        >
+          ✕
+        </button>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={saving || !value.trim()}
+          className={`py-2.5 px-3 rounded-lg text-xs font-extrabold transition-colors disabled:opacity-40 whitespace-nowrap ${accentClass}`}
+        >
+          {saving ? "..." : buttonLabel}
+        </button>
+      </div>
+      {showNotes ? (
+        <textarea
+          autoFocus
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Escape") onCancel(); }}
+          placeholder="Add a note (e.g. cooked only, limited amounts)..."
+          rows={2}
+          className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-secondary text-xs focus:outline-none focus:border-accent transition-colors resize-none"
+        />
+      ) : (
+        value.trim() && (
+          <button
+            type="button"
+            onClick={() => setShowNotes(true)}
+            className="text-left text-xs text-muted hover:text-secondary transition-colors"
+          >
+            + add a note
+          </button>
+        )
+      )}
     </div>
   );
 }
@@ -346,24 +371,27 @@ export default function GutPage() {
 
   // ── Food handlers ───────────────────────────────────────────────────────────
 
-  async function handleAddFood(name: string) {
-    if (!addingFood) return;
+  async function handleAddFood(name: string, notes: string, category: "AVOID" | "ALLOWED") {
     setSavingFood(true);
     try {
       const res = await fetch("/api/gut/foods", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, category: addingFood }),
+        body: JSON.stringify({ name, category, notes: notes || null }),
       });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
       const food: Food = await res.json();
-      burst(addingFood === "AVOID" ? AVOID_EMOJIS : ALLOW_EMOJIS);
+      burst(category === "AVOID" ? AVOID_EMOJIS : ALLOW_EMOJIS);
       bumpScore();
-      showToast(pick(addingFood === "AVOID" ? AVOID_MSGS : ALLOW_MSGS), "success");
+      showToast(pick(category === "AVOID" ? AVOID_MSGS : ALLOW_MSGS), "success");
       setNewFoodId(food.id);
       setTimeout(() => setNewFoodId(null), 600);
       setAddingFood(null);
       loadFoods();
-    } catch { showToast("Something went wrong", "error"); }
+    } catch (e) {
+      console.error(e);
+      showToast("Something went wrong", "error");
+    }
     finally { setSavingFood(false); }
   }
 
@@ -394,14 +422,15 @@ export default function GutPage() {
 
   // ── Strategy handlers ───────────────────────────────────────────────────────
 
-  async function handleAddStrategy(text: string) {
+  async function handleAddStrategy(text: string, notes: string) {
     setSavingStrategy(true);
     try {
       const res = await fetch("/api/gut/strategies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, notes: notes || null }),
       });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
       const strategy: Strategy = await res.json();
       burst(STRAT_EMOJIS);
       bumpScore();
@@ -410,7 +439,10 @@ export default function GutPage() {
       setTimeout(() => setNewStrategyId(null), 600);
       setAddingStrategy(false);
       loadStrategies();
-    } catch { showToast("Something went wrong", "error"); }
+    } catch (e) {
+      console.error(e);
+      showToast("Something went wrong", "error");
+    }
     finally { setSavingStrategy(false); }
   }
 
@@ -600,7 +632,7 @@ export default function GutPage() {
           {addingFood === "AVOID" ? (
             <QuickAdd
               placeholder="e.g. Carbonated drinks"
-              onAdd={handleAddFood}
+              onAdd={(name, notes) => handleAddFood(name, notes, "AVOID")}
               onCancel={() => setAddingFood(null)}
               saving={savingFood}
               accentClass="bg-danger text-white hover:bg-danger/80"
@@ -660,7 +692,7 @@ export default function GutPage() {
           {addingFood === "ALLOWED" ? (
             <QuickAdd
               placeholder="e.g. Oatmeal, applesauce"
-              onAdd={handleAddFood}
+              onAdd={(name, notes) => handleAddFood(name, notes, "ALLOWED")}
               onCancel={() => setAddingFood(null)}
               saving={savingFood}
               accentClass="bg-success text-bg hover:bg-success/80"
