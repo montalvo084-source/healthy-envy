@@ -276,6 +276,7 @@ export default function GutPage() {
 
   const [newFoodId, setNewFoodId] = useState<number | null>(null);
   const [newStrategyId, setNewStrategyId] = useState<number | null>(null);
+  const [strategyFormKey, setStrategyFormKey] = useState(0);
 
   // Phase
   const [activePhase, setActivePhase] = useState<Phase | null>(null);
@@ -449,7 +450,7 @@ export default function GutPage() {
       showToast(pick(STRATEGY_MSGS), "success");
       setNewStrategyId(strategy.id);
       setTimeout(() => setNewStrategyId(null), 600);
-      setAddingStrategy(false);
+      setStrategyFormKey((k) => k + 1);
       loadStrategies();
     } catch (e) {
       console.error(e);
@@ -775,6 +776,7 @@ export default function GutPage() {
           )}
           {addingStrategy ? (
             <QuickAdd
+              key={strategyFormKey}
               placeholder="e.g. Walk 10 min after meals"
               onAdd={handleAddStrategy}
               onCancel={() => setAddingStrategy(false)}
