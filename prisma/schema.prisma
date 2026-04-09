@@ -130,3 +130,12 @@ model DiverticulitisStrategy {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model GutFoodLog {
+  id        Int      @id @default(autoincrement())
+  date      String   // YYYY-MM-DD
+  food      String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

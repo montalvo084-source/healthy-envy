@@ -24,6 +24,13 @@ type Strategy = {
   notes: string | null;
 };
 
+type FoodLog = {
+  id: number;
+  date: string;
+  food: string;
+  notes: string | null;
+};
+
 type Particle = { id: number; emoji: string; x: number };
 
 // ── Randomized celebration messages ──────────────────────────────────────────
@@ -309,6 +316,18 @@ export default function GutPage() {
   const [editStrategyNotes, setEditStrategyNotes] = useState("");
   const [deleteStrategyConfirmId, setDeleteStrategyConfirmId] = useState<number | null>(null);
 
+  // Food Reaction Log
+  const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
+  const [loadingFoodLogs, setLoadingFoodLogs] = useState(true);
+  const [foodLogSearch, setFoodLogSearch] = useState("");
+  const [addingFoodLog, setAddingFoodLog] = useState(false);
+  const [savingFoodLog, setSavingFoodLog] = useState(false);
+  const [editingFoodLog, setEditingFoodLog] = useState<FoodLog | null>(null);
+  const [deleteFoodLogConfirmId, setDeleteFoodLogConfirmId] = useState<number | null>(null);
+  const [foodLogDate, setFoodLogDate] = useState("");
+  const [foodLogFood, setFoodLogFood] = useState("");
+  const [foodLogNotes, setFoodLogNotes] = useState("");
+
   async function loadPhase() {
     try {
       const res = await fetch("/api/gut/phase");
@@ -332,10 +351,19 @@ export default function GutPage() {
     finally { setLoadingStrategies(false); }
   }
 
+  async function loadFoodLogs() {
+    try {
+      const res = await fetch("/api/gut/food-logs");
+      setFoodLogs(await res.json());
+    } catch { /* ignore */ }
+    finally { setLoadingFoodLogs(false); }
+  }
+
   useEffect(() => {
     loadPhase();
     loadFoods();
     loadStrategies();
+    loadFoodLogs();
   }, []);
 
   const avoidFoods   = foods.filter((f) => f.category === "AVOID");
@@ -483,6 +511,61 @@ export default function GutPage() {
     setEditingStrategy(null);
     loadStrategies();
   }
+
+  // ── Food Reaction Log handlers ──────────────────────────────────────────────
+
+  function todayStr() {
+    return new Date().toISOString().split("T")[0];
+  }
+
+  async function handleAddFoodLog() {
+    if (!foodLogFood.trim()) { showToast("Enter a food name", "error"); return; }
+    if (!foodLogDate) { showToast("Pick a date", "error"); return; }
+    setSavingFoodLog(true);
+    try {
+      const res = await fetch("/api/gut/food-logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: foodLogDate, food: foodLogFood.trim(), notes: foodLogNotes.trim() || null }),
+      });
+      if (!res.ok) throw new Error();
+      showToast("Logged 📓", "success");
+      setAddingFoodLog(false);
+      setFoodLogFood("");
+      setFoodLogNotes("");
+      loadFoodLogs();
+    } catch { showToast("Something went wrong", "error"); }
+    finally { setSavingFoodLog(false); }
+  }
+
+  async function handleUpdateFoodLog() {
+    if (!editingFoodLog) return;
+    setSavingFoodLog(true);
+    try {
+      await fetch(`/api/gut/food-logs/${editingFoodLog.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: foodLogDate, food: foodLogFood.trim(), notes: foodLogNotes.trim() || null }),
+      });
+      showToast("Updated ✓", "success");
+      setEditingFoodLog(null);
+      loadFoodLogs();
+    } catch { showToast("Something went wrong", "error"); }
+    finally { setSavingFoodLog(false); }
+  }
+
+  async function handleDeleteFoodLog(id: number) {
+    if (deleteFoodLogConfirmId !== id) { setDeleteFoodLogConfirmId(id); return; }
+    await fetch(`/api/gut/food-logs/${id}`, { method: "DELETE" });
+    showToast("Removed", "info");
+    setDeleteFoodLogConfirmId(null);
+    setEditingFoodLog(null);
+    loadFoodLogs();
+  }
+
+  const filteredFoodLogs = foodLogSearch.trim()
+    ? foodLogs.filter((l) => l.food.toLowerCase().includes(foodLogSearch.trim().toLowerCase()))
+    : foodLogs;
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -794,6 +877,176 @@ export default function GutPage() {
             </button>
           )}
         </div>
+      </section>
+
+      {/* ── Food Reaction Log ────────────────────────────────────────────── */}
+      <section className="flex flex-col gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary flex items-center justify-between">
+          <span>Food Reaction Log</span>
+          {foodLogs.length > 0 && (
+            <span className="bg-accent/20 text-accent text-[10px] font-bold px-2 py-0.5 rounded-full">{foodLogs.length} logged</span>
+          )}
+        </h2>
+
+        {foodLogs.length > 0 && (
+          <input
+            type="search"
+            placeholder="Search a food…"
+            value={foodLogSearch}
+            onChange={(e) => setFoodLogSearch(e.target.value)}
+            className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
+          />
+        )}
+
+        <div className="bg-surface rounded-xl border border-border divide-y divide-border overflow-hidden">
+          {loadingFoodLogs ? (
+            <div className="h-12 animate-pulse" />
+          ) : (
+            filteredFoodLogs.map((log) => (
+              <div key={log.id}>
+                {editingFoodLog?.id === log.id ? (
+                  <div className="flex flex-col gap-2 p-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="date"
+                        value={foodLogDate}
+                        onChange={(e) => setFoodLogDate(e.target.value)}
+                        className="flex-1 bg-bg border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
+                      />
+                    </div>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={foodLogFood}
+                      onChange={(e) => setFoodLogFood(e.target.value)}
+                      placeholder="Food name"
+                      className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
+                    />
+                    <textarea
+                      value={foodLogNotes}
+                      onChange={(e) => setFoodLogNotes(e.target.value)}
+                      placeholder="What happened? e.g. stomach felt very heavy"
+                      rows={2}
+                      className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-secondary text-xs focus:outline-none focus:border-accent transition-colors resize-none"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteFoodLog(log.id)}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-colors ${
+                          deleteFoodLogConfirmId === log.id
+                            ? "bg-danger text-white"
+                            : "border border-border text-muted hover:text-danger"
+                        }`}
+                      >
+                        {deleteFoodLogConfirmId === log.id ? "Confirm?" : "Delete"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingFoodLog(null); setDeleteFoodLogConfirmId(null); }}
+                        className="flex-1 py-1.5 rounded-lg border border-border text-secondary font-bold text-xs"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleUpdateFoodLog}
+                        disabled={savingFoodLog || !foodLogFood.trim()}
+                        className="flex-1 py-1.5 rounded-lg bg-accent text-white text-xs font-bold disabled:opacity-50"
+                      >
+                        {savingFoodLog ? "..." : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingFoodLog(log);
+                      setFoodLogDate(log.date);
+                      setFoodLogFood(log.food);
+                      setFoodLogNotes(log.notes ?? "");
+                      setDeleteFoodLogConfirmId(null);
+                      setAddingFoodLog(false);
+                    }}
+                    className="w-full text-left flex flex-col px-3 py-3 gap-0.5"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-accent text-xs shrink-0">📓</span>
+                      <span className="text-app-text text-sm flex-1">{log.food}</span>
+                      <span className="text-muted text-xs">{log.date}</span>
+                    </div>
+                    {log.notes && <p className="text-muted text-xs pl-5">{log.notes}</p>}
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+
+          {addingFoodLog ? (
+            <div className="flex flex-col gap-2 p-3">
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={foodLogDate}
+                  onChange={(e) => setFoodLogDate(e.target.value)}
+                  className="flex-1 bg-bg border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
+                />
+              </div>
+              <input
+                autoFocus
+                type="text"
+                value={foodLogFood}
+                onChange={(e) => setFoodLogFood(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Escape") setAddingFoodLog(false); }}
+                placeholder="e.g. pork chop"
+                className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
+              />
+              <textarea
+                value={foodLogNotes}
+                onChange={(e) => setFoodLogNotes(e.target.value)}
+                placeholder="What happened? e.g. stomach felt very heavy"
+                rows={2}
+                className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-secondary text-xs focus:outline-none focus:border-accent transition-colors resize-none"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAddingFoodLog(false)}
+                  className="flex-1 py-2 rounded-lg border border-border text-secondary font-bold text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddFoodLog}
+                  disabled={savingFoodLog || !foodLogFood.trim()}
+                  className="flex-1 py-2 rounded-lg bg-accent text-white text-xs font-bold disabled:opacity-50"
+                >
+                  {savingFoodLog ? "..." : "📓 Log it"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setFoodLogDate(todayStr());
+                setFoodLogFood("");
+                setFoodLogNotes("");
+                setAddingFoodLog(true);
+                setEditingFoodLog(null);
+              }}
+              className="w-full px-3 py-3 text-left text-sm text-muted hover:text-accent hover:bg-accent/5 transition-colors font-medium flex items-center gap-2"
+            >
+              <span>📓</span> Log a food reaction
+            </button>
+          )}
+        </div>
+
+        {foodLogSearch.trim() && filteredFoodLogs.length === 0 && (
+          <p className="text-xs text-muted text-center py-2">No reactions logged for &ldquo;{foodLogSearch}&rdquo;</p>
+        )}
       </section>
     </div>
   );
