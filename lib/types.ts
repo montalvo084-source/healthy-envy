@@ -10,6 +10,18 @@ export interface ProteinSource {
   createdAt: string;
 }
 
+export interface FiberSource {
+  id: number;
+  key: string;
+  label: string;
+  fiber: number;
+  unit: string;
+  emoji: string;
+  active: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface Profile {
   id: number;
   name: string;
@@ -58,6 +70,13 @@ export interface ProteinEntry {
   quantity: number;
 }
 
+export interface FiberEntry {
+  id: number;
+  logId: number;
+  sourceKey: string;
+  quantity: number;
+}
+
 export interface QuestionAnswer {
   id: number;
   logId: number;
@@ -76,6 +95,7 @@ export interface DailyLog {
   createdAt: string;
   updatedAt: string;
   proteinEntries?: ProteinEntry[];
+  fiberEntries?: FiberEntry[];
   questionAnswers?: QuestionAnswer[];
 }
 

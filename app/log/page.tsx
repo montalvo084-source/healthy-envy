@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/lib/toast-context";
-import { todayStr } from "@/lib/calculations";
+import { todayStr, calcFiberTotal } from "@/lib/calculations";
 import type { DailyLog, Profile } from "@/lib/types";
 import ProteinTracker, { ProteinCounts } from "@/components/ProteinTracker";
-import ProgressBar from "@/components/ProgressBar";
+import FiberTracker, { FiberCounts } from "@/components/FiberTracker";
+import { useFiberSources } from "@/lib/fiber-sources-context";
 
 export default function LogPage() {
   return (
@@ -28,6 +29,7 @@ function LogContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
+  const { sources: fiberSources } = useFiberSources();
 
   const dateParam = searchParams.get("date") ?? todayStr();
 
@@ -40,7 +42,7 @@ function LogContent() {
 
   // Form state
   const [proteinCounts, setProteinCounts] = useState<ProteinCounts>({});
-  const [fiberGrams, setFiberGrams] = useState("");
+  const [fiberCounts, setFiberCounts] = useState<FiberCounts>({});
   const [priority, setPriority] = useState<boolean | null>(null);
   const [note, setNote] = useState("");
 
@@ -60,14 +62,19 @@ function LogContent() {
       if (log) {
         setExistingLog(log);
         setPriority(log.proteinPriority ?? null);
-        setFiberGrams(log.fiberGrams != null ? String(log.fiberGrams) : "");
         setNote(log.note ?? "");
 
-        const counts: ProteinCounts = {};
+        const proteinCounts: ProteinCounts = {};
         (log.proteinEntries ?? []).forEach((e) => {
-          counts[e.sourceKey] = e.quantity;
+          proteinCounts[e.sourceKey] = e.quantity;
         });
-        setProteinCounts(counts);
+        setProteinCounts(proteinCounts);
+
+        const fiberCounts: FiberCounts = {};
+        (log.fiberEntries ?? []).forEach((e) => {
+          fiberCounts[e.sourceKey] = e.quantity;
+        });
+        setFiberCounts(fiberCounts);
       }
     } finally {
       setLoading(false);
@@ -85,13 +92,23 @@ function LogContent() {
         .filter(([, qty]) => qty > 0)
         .map(([sourceKey, quantity]) => ({ sourceKey, quantity }));
 
+      const fiberEntries = Object.entries(fiberCounts)
+        .filter(([, qty]) => qty > 0)
+        .map(([sourceKey, quantity]) => ({ sourceKey, quantity }));
+
+      const fiberTotal = calcFiberTotal(
+        fiberEntries.map((e) => ({ id: 0, logId: 0, sourceKey: e.sourceKey, quantity: e.quantity })),
+        fiberSources
+      );
+
       const payload = {
         date: dateParam,
         phaseId: null,
         proteinPriority: priority,
-        fiberGrams: fiberGrams || null,
+        fiberGrams: fiberTotal > 0 ? fiberTotal : null,
         note: note || null,
         proteinEntries,
+        fiberEntries,
         questionAnswers: [],
       };
 
@@ -138,9 +155,6 @@ function LogContent() {
         month: "long",
         day: "numeric",
       });
-
-  const fiberGoal = profile?.fiberGoal ?? 25;
-  const fiberValue = parseFloat(fiberGrams) || 0;
 
   if (loading) {
     return (
@@ -189,28 +203,11 @@ function LogContent() {
         <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
           🌿 Fiber Intake
         </label>
-        <div className="bg-surface rounded-xl border border-border p-4 flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="0"
-              max="200"
-              step="1"
-              value={fiberGrams}
-              onChange={(e) => setFiberGrams(e.target.value)}
-              placeholder="0"
-              className="w-24 bg-bg border border-border rounded-lg px-3 py-2 text-app-text text-lg font-bold text-center focus:outline-none focus:border-accent transition-colors"
-            />
-            <span className="text-secondary text-sm">
-              g &nbsp;/&nbsp; <span className="text-app-text font-semibold">{fiberGoal}g</span> goal
-            </span>
-          </div>
-          <ProgressBar
-            value={fiberValue}
-            max={fiberGoal}
-            color="var(--color-success)"
-          />
-        </div>
+        <FiberTracker
+          counts={fiberCounts}
+          onChange={setFiberCounts}
+          goal={profile?.fiberGoal ?? 25}
+        />
       </section>
 
       {/* Section: Priority */}

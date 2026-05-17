@@ -61,6 +61,7 @@ model DailyLog {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   proteinEntries  ProteinEntry[]
+  fiberEntries    FiberEntry[]
   questionAnswers QuestionAnswer[]
 }
 
@@ -100,6 +101,26 @@ model ProteinSource {
   active    Boolean  @default(true)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+model FiberSource {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  label     String
+  fiber     Float
+  unit      String
+  emoji     String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model FiberEntry {
+  id        Int      @id @default(autoincrement())
+  logId     Int
+  log       DailyLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  sourceKey String
+  quantity  Float
 }
 
 model DiverticulitisPhase {

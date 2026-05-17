@@ -10,6 +10,7 @@ export async function GET(
     where: { date },
     include: {
       proteinEntries: true,
+      fiberEntries: true,
       questionAnswers: true,
       phase: true,
     },
@@ -24,7 +25,7 @@ export async function PUT(
 ) {
   const { date } = await ctx.params;
   const body = await request.json();
-  const { proteinEntries = [], questionAnswers = [], ...fields } = body;
+  const { proteinEntries = [], fiberEntries = [], questionAnswers = [], ...fields } = body;
 
   const existing = await db.dailyLog.findUnique({ where: { date } });
   if (!existing) {
@@ -32,6 +33,7 @@ export async function PUT(
   }
 
   await db.proteinEntry.deleteMany({ where: { logId: existing.id } });
+  await db.fiberEntry.deleteMany({ where: { logId: existing.id } });
   await db.questionAnswer.deleteMany({ where: { logId: existing.id } });
 
   const log = await db.dailyLog.update({
@@ -53,6 +55,14 @@ export async function PUT(
             quantity: Number(e.quantity),
           })),
       },
+      fiberEntries: {
+        create: fiberEntries
+          .filter((e: { quantity: number }) => e.quantity > 0)
+          .map((e: { sourceKey: string; quantity: number }) => ({
+            sourceKey: e.sourceKey,
+            quantity: Number(e.quantity),
+          })),
+      },
       questionAnswers: {
         create: questionAnswers.map(
           (a: { questionKey: string; value: string }) => ({
@@ -62,7 +72,7 @@ export async function PUT(
         ),
       },
     },
-    include: { proteinEntries: true, questionAnswers: true, phase: true },
+    include: { proteinEntries: true, fiberEntries: true, questionAnswers: true, phase: true },
   });
 
   return NextResponse.json(log);

@@ -5,6 +5,7 @@ export async function GET() {
   const logs = await db.dailyLog.findMany({
     include: {
       proteinEntries: true,
+      fiberEntries: true,
       questionAnswers: true,
       phase: true,
     },
@@ -15,14 +16,20 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { date, proteinEntries = [], questionAnswers = [], ...fields } = body;
+  const { date, proteinEntries = [], fiberEntries = [], questionAnswers = [], ...fields } = body;
 
   const existing = await db.dailyLog.findUnique({ where: { date } });
 
+  // fiberGrams is sent by the client as the computed total from entries
+  const fiberGramsValue =
+    fields.fiberGrams != null && fields.fiberGrams !== ""
+      ? Number(fields.fiberGrams)
+      : null;
+
   let log;
   if (existing) {
-    // Update: delete nested children then re-create
     await db.proteinEntry.deleteMany({ where: { logId: existing.id } });
+    await db.fiberEntry.deleteMany({ where: { logId: existing.id } });
     await db.questionAnswer.deleteMany({ where: { logId: existing.id } });
 
     log = await db.dailyLog.update({
@@ -33,13 +40,18 @@ export async function POST(request: NextRequest) {
           fields.proteinPriority != null
             ? Boolean(fields.proteinPriority)
             : null,
-        fiberGrams:
-          fields.fiberGrams != null && fields.fiberGrams !== ""
-            ? Number(fields.fiberGrams)
-            : null,
+        fiberGrams: fiberGramsValue,
         note: fields.note ?? null,
         proteinEntries: {
           create: proteinEntries
+            .filter((e: { quantity: number }) => e.quantity > 0)
+            .map((e: { sourceKey: string; quantity: number }) => ({
+              sourceKey: e.sourceKey,
+              quantity: Number(e.quantity),
+            })),
+        },
+        fiberEntries: {
+          create: fiberEntries
             .filter((e: { quantity: number }) => e.quantity > 0)
             .map((e: { sourceKey: string; quantity: number }) => ({
               sourceKey: e.sourceKey,
@@ -55,7 +67,7 @@ export async function POST(request: NextRequest) {
           ),
         },
       },
-      include: { proteinEntries: true, questionAnswers: true, phase: true },
+      include: { proteinEntries: true, fiberEntries: true, questionAnswers: true, phase: true },
     });
   } else {
     log = await db.dailyLog.create({
@@ -66,13 +78,18 @@ export async function POST(request: NextRequest) {
           fields.proteinPriority != null
             ? Boolean(fields.proteinPriority)
             : null,
-        fiberGrams:
-          fields.fiberGrams != null && fields.fiberGrams !== ""
-            ? Number(fields.fiberGrams)
-            : null,
+        fiberGrams: fiberGramsValue,
         note: fields.note ?? null,
         proteinEntries: {
           create: proteinEntries
+            .filter((e: { quantity: number }) => e.quantity > 0)
+            .map((e: { sourceKey: string; quantity: number }) => ({
+              sourceKey: e.sourceKey,
+              quantity: Number(e.quantity),
+            })),
+        },
+        fiberEntries: {
+          create: fiberEntries
             .filter((e: { quantity: number }) => e.quantity > 0)
             .map((e: { sourceKey: string; quantity: number }) => ({
               sourceKey: e.sourceKey,
@@ -88,7 +105,7 @@ export async function POST(request: NextRequest) {
           ),
         },
       },
-      include: { proteinEntries: true, questionAnswers: true, phase: true },
+      include: { proteinEntries: true, fiberEntries: true, questionAnswers: true, phase: true },
     });
   }
 

@@ -1,4 +1,4 @@
-import type { DailyLog, ProteinEntry, ProteinSource } from "@/lib/types";
+import type { DailyLog, ProteinEntry, ProteinSource, FiberEntry, FiberSource } from "@/lib/types";
 import { PROTEIN_SOURCES } from "@/lib/protein-sources";
 
 export function calcProteinTotal(
@@ -11,6 +11,40 @@ export function calcProteinTotal(
     if (protein == null) return total;
     return total + entry.quantity * protein;
   }, 0);
+}
+
+export function calcFiberTotal(
+  entries: FiberEntry[],
+  sources: Pick<FiberSource, "key" | "fiber">[] = []
+): number {
+  const map = new Map(sources.map((s) => [s.key, s.fiber]));
+  return entries.reduce((total, entry) => {
+    const fiber = map.get(entry.sourceKey);
+    if (fiber == null) return total;
+    return total + entry.quantity * fiber;
+  }, 0);
+}
+
+export function calcAvgFiber(
+  logs: DailyLog[],
+  days = 14,
+  sources?: Pick<FiberSource, "key" | "fiber">[]
+): number {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = formatDate(cutoff);
+
+  const recent = logs.filter(
+    (l) => l.date >= cutoffStr && l.fiberEntries && l.fiberEntries.length > 0
+  );
+
+  if (recent.length === 0) return 0;
+
+  const total = recent.reduce((sum, log) => {
+    return sum + calcFiberTotal(log.fiberEntries ?? [], sources ?? []);
+  }, 0);
+
+  return Math.round(total / recent.length);
 }
 
 export function calcStreak(logs: DailyLog[]): number {
