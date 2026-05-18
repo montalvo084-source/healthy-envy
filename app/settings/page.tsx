@@ -3,13 +3,11 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/lib/toast-context";
 import { useProteinSources } from "@/lib/protein-sources-context";
-import { useFiberSources } from "@/lib/fiber-sources-context";
-import type { Profile, ProteinSource, FiberSource } from "@/lib/types";
+import type { Profile, ProteinSource } from "@/lib/types";
 
 export default function SettingsPage() {
   const { showToast } = useToast();
   const { sources, reload: reloadSources } = useProteinSources();
-  const { sources: fiberSources, reload: reloadFiberSources } = useFiberSources();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resetStep, setResetStep] = useState<0 | 1 | 2>(0);
@@ -31,23 +29,6 @@ export default function SettingsPage() {
   const [newUnit, setNewUnit] = useState("g");
   const [newEmoji, setNewEmoji] = useState("🥩");
   const [addingSource, setAddingSource] = useState(false);
-
-  // Fiber sources editing state
-  const [editingFiberSource, setEditingFiberSource] = useState<FiberSource | null>(null);
-  const [editFiberLabel, setEditFiberLabel] = useState("");
-  const [editFiberAmount, setEditFiberAmount] = useState("");
-  const [editFiberUnit, setEditFiberUnit] = useState("");
-  const [editFiberEmoji, setEditFiberEmoji] = useState("");
-  const [savingFiberSource, setSavingFiberSource] = useState(false);
-  const [deletingFiberId, setDeletingFiberId] = useState<number | null>(null);
-
-  // New fiber source form
-  const [showAddFiberForm, setShowAddFiberForm] = useState(false);
-  const [newFiberLabel, setNewFiberLabel] = useState("");
-  const [newFiberAmount, setNewFiberAmount] = useState("");
-  const [newFiberUnit, setNewFiberUnit] = useState("cup");
-  const [newFiberEmoji, setNewFiberEmoji] = useState("🌿");
-  const [addingFiberSource, setAddingFiberSource] = useState(false);
 
   // Stats
   const [logCount, setLogCount] = useState(0);
@@ -188,101 +169,6 @@ export default function SettingsPage() {
       showToast("Something went wrong", "error");
     } finally {
       setAddingSource(false);
-    }
-  }
-
-  function startEditFiber(source: FiberSource) {
-    setEditingFiberSource(source);
-    setEditFiberLabel(source.label);
-    setEditFiberAmount(String(source.fiber));
-    setEditFiberUnit(source.unit);
-    setEditFiberEmoji(source.emoji);
-  }
-
-  async function handleSaveFiberSource() {
-    if (!editingFiberSource) return;
-    setSavingFiberSource(true);
-    try {
-      const res = await fetch(`/api/fiber-sources/${editingFiberSource.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          label: editFiberLabel,
-          fiber: editFiberAmount,
-          unit: editFiberUnit,
-          emoji: editFiberEmoji,
-          active: editingFiberSource.active,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      await reloadFiberSources();
-      setEditingFiberSource(null);
-      showToast("Source updated!", "success");
-    } catch {
-      showToast("Something went wrong", "error");
-    } finally {
-      setSavingFiberSource(false);
-    }
-  }
-
-  async function handleToggleFiberActive(source: FiberSource) {
-    await fetch(`/api/fiber-sources/${source.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        label: source.label,
-        fiber: source.fiber,
-        unit: source.unit,
-        emoji: source.emoji,
-        active: !source.active,
-      }),
-    });
-    await reloadFiberSources();
-  }
-
-  async function handleDeleteFiberSource(id: number) {
-    if (deletingFiberId !== id) {
-      setDeletingFiberId(id);
-      return;
-    }
-    await fetch(`/api/fiber-sources/${id}`, { method: "DELETE" });
-    await reloadFiberSources();
-    setDeletingFiberId(null);
-    showToast("Source deleted", "info");
-  }
-
-  async function handleAddFiberSource() {
-    if (!newFiberLabel || !newFiberAmount) {
-      showToast("Name and fiber amount are required", "error");
-      return;
-    }
-    setAddingFiberSource(true);
-    try {
-      const key = newFiberLabel.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") + "_" + Date.now();
-      const res = await fetch("/api/fiber-sources", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key,
-          label: newFiberLabel,
-          fiber: newFiberAmount,
-          unit: newFiberUnit,
-          emoji: newFiberEmoji,
-          active: true,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      await reloadFiberSources();
-      setNewFiberLabel("");
-      setNewFiberAmount("");
-      setNewFiberUnit("cup");
-      setNewFiberEmoji("🌿");
-      setShowAddFiberForm(false);
-      showToast("Source added!", "success");
-    } catch {
-      showToast("Something went wrong", "error");
-    } finally {
-      setAddingFiberSource(false);
     }
   }
 
@@ -631,184 +517,6 @@ export default function SettingsPage() {
                       className={`text-xs px-2 py-1 rounded-lg font-semibold transition-colors ${deletingId === source.id ? "bg-danger text-white" : "text-danger/70 bg-danger/10"}`}
                     >
                       {deletingId === source.id ? "Sure?" : "Del"}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Fiber Sources */}
-      <section className="bg-surface rounded-xl border border-border p-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-app-text uppercase tracking-wide">
-            Fiber Sources
-          </h2>
-          <button
-            type="button"
-            onClick={() => setShowAddFiberForm((v) => !v)}
-            className="text-xs font-bold text-success hover:text-success/80 transition-colors"
-          >
-            {showAddFiberForm ? "Cancel" : "+ Add"}
-          </button>
-        </div>
-
-        {showAddFiberForm && (
-          <div className="flex flex-col gap-3 border border-border rounded-xl p-3 bg-bg">
-            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">New Source</p>
-            <div className="flex gap-2">
-              <div className="flex flex-col gap-1 w-14">
-                <label className="text-xs text-secondary">Emoji</label>
-                <input
-                  type="text"
-                  value={newFiberEmoji}
-                  onChange={(e) => setNewFiberEmoji(e.target.value)}
-                  className="w-full bg-surface border border-border rounded-lg px-2 py-2 text-center text-lg focus:outline-none focus:border-accent"
-                  maxLength={4}
-                />
-              </div>
-              <div className="flex flex-col gap-1 flex-1">
-                <label className="text-xs text-secondary">Name</label>
-                <input
-                  type="text"
-                  value={newFiberLabel}
-                  onChange={(e) => setNewFiberLabel(e.target.value)}
-                  placeholder="e.g. Broccoli"
-                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex flex-col gap-1 flex-1">
-                <label className="text-xs text-secondary">Fiber (g) per unit</label>
-                <input
-                  type="number"
-                  value={newFiberAmount}
-                  onChange={(e) => setNewFiberAmount(e.target.value)}
-                  placeholder="0"
-                  min="0"
-                  step="0.1"
-                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
-                />
-              </div>
-              <div className="flex flex-col gap-1 flex-1">
-                <label className="text-xs text-secondary">Unit label</label>
-                <input
-                  type="text"
-                  value={newFiberUnit}
-                  onChange={(e) => setNewFiberUnit(e.target.value)}
-                  placeholder="cup"
-                  className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
-                />
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleAddFiberSource}
-              disabled={addingFiberSource}
-              className="w-full py-2.5 rounded-xl bg-success text-bg font-extrabold text-sm hover:bg-success/80 transition-colors disabled:opacity-50"
-            >
-              {addingFiberSource ? "Adding..." : "Add Source"}
-            </button>
-          </div>
-        )}
-
-        <div className="flex flex-col gap-2">
-          {fiberSources.map((source) => (
-            <div key={source.id}>
-              {editingFiberSource?.id === source.id ? (
-                <div className="flex flex-col gap-2 border border-success/40 rounded-xl p-3 bg-bg">
-                  <div className="flex gap-2">
-                    <div className="flex flex-col gap-1 w-14">
-                      <label className="text-xs text-secondary">Emoji</label>
-                      <input
-                        type="text"
-                        value={editFiberEmoji}
-                        onChange={(e) => setEditFiberEmoji(e.target.value)}
-                        className="w-full bg-surface border border-border rounded-lg px-2 py-2 text-center text-lg focus:outline-none focus:border-accent"
-                        maxLength={4}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1 flex-1">
-                      <label className="text-xs text-secondary">Name</label>
-                      <input
-                        type="text"
-                        value={editFiberLabel}
-                        onChange={(e) => setEditFiberLabel(e.target.value)}
-                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex flex-col gap-1 flex-1">
-                      <label className="text-xs text-secondary">Fiber (g) per unit</label>
-                      <input
-                        type="number"
-                        value={editFiberAmount}
-                        onChange={(e) => setEditFiberAmount(e.target.value)}
-                        min="0"
-                        step="0.1"
-                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1 flex-1">
-                      <label className="text-xs text-secondary">Unit label</label>
-                      <input
-                        type="text"
-                        value={editFiberUnit}
-                        onChange={(e) => setEditFiberUnit(e.target.value)}
-                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-app-text text-sm focus:outline-none focus:border-accent"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditingFiberSource(null)}
-                      className="flex-1 py-2 rounded-lg border border-border text-secondary font-bold text-sm"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveFiberSource}
-                      disabled={savingFiberSource}
-                      className="flex-1 py-2 rounded-lg bg-success text-bg font-bold text-sm disabled:opacity-50"
-                    >
-                      {savingFiberSource ? "Saving..." : "Save"}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${source.active ? "border-border bg-bg" : "border-border/50 bg-bg opacity-50"}`}>
-                  <span className="text-xl w-7 text-center">{source.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-app-text truncate">{source.label}</p>
-                    <p className="text-xs text-secondary">{source.fiber}g per {source.unit}</p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleFiberActive(source)}
-                      className={`text-xs px-2 py-1 rounded-lg font-semibold transition-colors ${source.active ? "text-success bg-success/10" : "text-secondary bg-border"}`}
-                    >
-                      {source.active ? "On" : "Off"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => startEditFiber(source)}
-                      className="text-xs px-2 py-1 rounded-lg text-secondary hover:text-app-text bg-border transition-colors font-semibold"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteFiberSource(source.id)}
-                      className={`text-xs px-2 py-1 rounded-lg font-semibold transition-colors ${deletingFiberId === source.id ? "bg-danger text-white" : "text-danger/70 bg-danger/10"}`}
-                    >
-                      {deletingFiberId === source.id ? "Sure?" : "Del"}
                     </button>
                   </div>
                 </div>

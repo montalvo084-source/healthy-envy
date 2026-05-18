@@ -3,7 +3,6 @@ import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/lib/toast-context";
 import { ProteinSourcesProvider } from "@/lib/protein-sources-context";
-import { FiberSourcesProvider } from "@/lib/fiber-sources-context";
 import Nav from "@/components/Nav";
 
 const dmSans = DM_Sans({
@@ -40,12 +39,10 @@ export default function RootLayout({
       <body className="min-h-full bg-bg text-app-text font-sans antialiased">
         <ToastProvider>
           <ProteinSourcesProvider>
-            <FiberSourcesProvider>
-              <main className="max-w-[480px] mx-auto min-h-screen pb-20 px-4">
-                {children}
-              </main>
-              <Nav />
-            </FiberSourcesProvider>
+            <main className="max-w-[480px] mx-auto min-h-screen pb-20 px-4">
+              {children}
+            </main>
+            <Nav />
           </ProteinSourcesProvider>
         </ToastProvider>
       </body>
