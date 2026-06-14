@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useProteinSources } from "@/lib/protein-sources-context";
 import ProgressBar from "@/components/ProgressBar";
 
@@ -13,6 +14,13 @@ interface ProteinTrackerProps {
   goal: number;
 }
 
+const MILESTONE_MESSAGES: Record<number, string> = {
+  25: "25% There!",
+  50: "Halfway There!",
+  75: "75% Done!",
+  100: "Goal Achieved! 🎉",
+};
+
 export default function ProteinTracker({
   counts,
   onChange,
@@ -25,7 +33,24 @@ export default function ProteinTracker({
     return sum + (counts[source.key] ?? 0) * source.protein;
   }, 0);
 
-  const pct = Math.round((total / goal) * 100);
+  const remaining = Math.max(0, goal - Math.round(total));
+  const pct = Math.min(100, Math.round((total / goal) * 100));
+  const done = remaining === 0;
+
+  const [milestone, setMilestone] = useState<string | null>(null);
+  const prevPct = useRef(pct);
+
+  useEffect(() => {
+    const prev = prevPct.current;
+    prevPct.current = pct;
+    for (const m of [25, 50, 75, 100]) {
+      if (prev < m && pct >= m) {
+        setMilestone(MILESTONE_MESSAGES[m]);
+        const t = setTimeout(() => setMilestone(null), 2500);
+        return () => clearTimeout(t);
+      }
+    }
+  }, [pct]);
 
   function adjust(key: string, delta: number) {
     const current = counts[key] ?? 0;
@@ -35,20 +60,30 @@ export default function ProteinTracker({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="bg-surface rounded-xl p-3 border border-border">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-            Daily Total
-          </span>
-          <span className="text-sm font-bold text-accent">
-            {Math.round(total)}g
-            <span className="text-secondary font-normal"> / {goal}g</span>
-            <span className="text-secondary font-normal text-xs ml-1">
-              ({pct}%)
-            </span>
-          </span>
-        </div>
+      <div className="bg-surface rounded-xl p-4 border border-border flex flex-col gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+          🥩 Daily Protein
+        </span>
+        {done ? (
+          <p className="text-4xl font-extrabold text-success">Goal Reached! 🎉</p>
+        ) : (
+          <div className="flex items-baseline gap-1">
+            <span className="text-4xl font-extrabold text-accent">{remaining}g</span>
+            <span className="text-secondary text-base font-semibold">LEFT</span>
+          </div>
+        )}
         <ProgressBar value={total} max={goal} />
+        <p className="text-xs text-secondary text-right">
+          {Math.round(total)}g / {goal}g
+          <span className="ml-2 text-app-text font-semibold">
+            {done ? "Goal Reached!" : `${pct}% Complete`}
+          </span>
+        </p>
+        {milestone && (
+          <div className="mt-1 rounded-lg bg-accent/15 border border-accent/30 px-3 py-1.5 text-sm font-bold text-accent text-center">
+            {milestone}
+          </div>
+        )}
       </div>
 
       {sources.map((source) => {

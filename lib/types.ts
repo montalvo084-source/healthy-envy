@@ -29,6 +29,7 @@ export interface Profile {
   proteinGoal: number;
   weeklyProteinGoal: number;
   fiberGoal: number;
+  weeklyFiberGoal: number;
   unit: string;
   startWaist: number | null;
   startHips: number | null;

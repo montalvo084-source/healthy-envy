@@ -14,6 +14,7 @@ model Profile {
   proteinGoal       Int      @default(120)
   weeklyProteinGoal Int      @default(0)
   fiberGoal         Int      @default(25)
+  weeklyFiberGoal   Int      @default(0)
   unit              String   @default("lbs")
   startWaist        Float?
   startHips         Float?

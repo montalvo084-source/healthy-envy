@@ -29,6 +29,8 @@ export async function PUT(request: NextRequest) {
         body.weeklyProteinGoal !== undefined ? Number(body.weeklyProteinGoal) : undefined,
       fiberGoal:
         body.fiberGoal !== undefined ? Number(body.fiberGoal) : undefined,
+      weeklyFiberGoal:
+        body.weeklyFiberGoal !== undefined ? Number(body.weeklyFiberGoal) : undefined,
       unit: body.unit,
       startWaist:
         body.startWaist !== undefined
