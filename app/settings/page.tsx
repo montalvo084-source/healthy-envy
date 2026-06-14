@@ -60,7 +60,6 @@ export default function SettingsPage() {
   const [proteinGoal, setProteinGoal] = useState("");
   const [weeklyProteinGoal, setWeeklyProteinGoal] = useState("");
   const [fiberGoal, setFiberGoal] = useState("");
-  const [weeklyFiberGoal, setWeeklyFiberGoal] = useState("");
   const [unit, setUnit] = useState("lbs");
   const [startWaist, setStartWaist] = useState("");
   const [startHips, setStartHips] = useState("");
@@ -84,7 +83,6 @@ export default function SettingsPage() {
       setProteinGoal(String(profile.proteinGoal));
       setWeeklyProteinGoal(profile.weeklyProteinGoal > 0 ? String(profile.weeklyProteinGoal) : "");
       setFiberGoal(String(profile.fiberGoal ?? 25));
-      setWeeklyFiberGoal(profile.weeklyFiberGoal > 0 ? String(profile.weeklyFiberGoal) : "");
       setUnit(profile.unit);
       setStartWaist(profile.startWaist != null ? String(profile.startWaist) : "");
       setStartHips(profile.startHips != null ? String(profile.startHips) : "");
@@ -300,7 +298,6 @@ export default function SettingsPage() {
           proteinGoal,
           weeklyProteinGoal: weeklyProteinGoal || "0",
           fiberGoal,
-          weeklyFiberGoal: weeklyFiberGoal || "0",
           unit,
           startWaist,
           startHips,
@@ -402,30 +399,16 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="flex gap-3">
-          <div className="flex flex-col gap-1.5 flex-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
-              Daily Fiber Goal (g)
-            </label>
-            <input
-              type="number"
-              value={fiberGoal}
-              onChange={(e) => setFiberGoal(e.target.value)}
-              className="w-full bg-bg border border-border rounded-lg px-3 py-3 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5 flex-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
-              Weekly Fiber Goal (g)
-            </label>
-            <input
-              type="number"
-              value={weeklyFiberGoal}
-              onChange={(e) => setWeeklyFiberGoal(e.target.value)}
-              placeholder={fiberGoal ? `${Number(fiberGoal) * 7} (auto)` : "auto"}
-              className="w-full bg-bg border border-border rounded-lg px-3 py-3 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
-            />
-          </div>
+        <div className="flex flex-col gap-1.5 w-48">
+          <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            Daily Fiber Goal (g)
+          </label>
+          <input
+            type="number"
+            value={fiberGoal}
+            onChange={(e) => setFiberGoal(e.target.value)}
+            className="w-full bg-bg border border-border rounded-lg px-3 py-3 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
+          />
         </div>
 
         <div className="flex flex-col gap-1.5 w-28">
