@@ -12,7 +12,6 @@ import {
 } from "@/lib/calculations";
 import { useProteinSources } from "@/lib/protein-sources-context";
 import ChartProtein from "@/components/ChartProtein";
-import ChartFiber from "@/components/ChartFiber";
 
 export default function Dashboard() {
   const { sources, loaded: sourcesLoaded } = useProteinSources();
@@ -79,11 +78,6 @@ export default function Dashboard() {
   const todayRemaining = Math.max(0, proteinGoal - todayProtein);
   const todayPct = Math.min(100, (todayProtein / proteinGoal) * 100);
 
-  const fiberGoal = profile?.fiberGoal ?? 25;
-  const todayFiber = todayLog?.fiberGrams ?? 0;
-  const todayFiberRemaining = Math.max(0, fiberGoal - todayFiber);
-  const todayFiberPct = Math.min(100, (todayFiber / fiberGoal) * 100);
-
   return (
     <div className="py-6 flex flex-col gap-5">
       {/* Header */}
@@ -115,7 +109,7 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="bg-surface rounded-xl border border-border p-3 text-center">
-          <p className="text-2xl font-extrabold text-app-text">{avgProtein}g</p>
+          <p className="text-2xl font-extrabold text-app-text">{avgProtein > 0 ? `${avgProtein}g` : "--"}</p>
           <p className="text-xs text-secondary font-semibold uppercase tracking-wide mt-0.5">
             🥩 14d Avg
           </p>
@@ -136,14 +130,6 @@ export default function Dashboard() {
         goal={proteinGoal}
         remaining={todayRemaining}
         pct={todayPct}
-      />
-
-      {/* Today Fiber Widget */}
-      <TodayFiberWidget
-        logged={todayFiber}
-        goal={fiberGoal}
-        remaining={todayFiberRemaining}
-        pct={todayFiberPct}
       />
 
       {/* Log Today Button */}
@@ -183,17 +169,6 @@ export default function Dashboard() {
           <span className="text-xs text-secondary">Goal: {proteinGoal}g</span>
         </div>
         <ChartProtein logs={logs} goal={proteinGoal} days={14} sources={sources} />
-      </div>
-
-      {/* Mini Fiber Chart */}
-      <div className="bg-surface rounded-xl border border-border p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-app-text uppercase tracking-wide">
-            Fiber · Last 14 Days
-          </h2>
-          <span className="text-xs text-secondary">Goal: {fiberGoal}g</span>
-        </div>
-        <ChartFiber logs={logs} goal={fiberGoal} days={14} />
       </div>
 
       {/* Record Measurement Button */}
@@ -329,62 +304,3 @@ function TodayProteinWidget({
   );
 }
 
-function TodayFiberWidget({
-  logged,
-  goal,
-  remaining,
-  pct,
-}: {
-  logged: number;
-  goal: number;
-  remaining: number;
-  pct: number;
-}) {
-  const [barWidth, setBarWidth] = useState(0);
-
-  useEffect(() => {
-    const t = setTimeout(() => setBarWidth(pct), 120);
-    return () => clearTimeout(t);
-  }, [pct]);
-
-  const done = remaining === 0;
-
-  return (
-    <div className="bg-surface rounded-xl border border-border p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-app-text uppercase tracking-wide">
-          🌿 Fiber Today
-        </h2>
-        <Link
-          href="/log"
-          className="text-xs text-secondary hover:text-success transition-colors"
-        >
-          Log now
-        </Link>
-      </div>
-
-      <div className="flex items-end justify-between gap-2">
-        <div>
-          <span className="text-3xl font-extrabold text-app-text">{logged}</span>
-          <span className="text-secondary text-sm ml-1">g</span>
-        </div>
-        {done ? (
-          <span className="text-success text-sm font-bold">Goal hit! 🎉</span>
-        ) : (
-          <span className="text-secondary text-sm">
-            <span className="text-app-text font-bold">{remaining}g</span> left
-          </span>
-        )}
-      </div>
-
-      <div className="h-3 bg-border rounded-full overflow-hidden">
-        <div
-          className="h-full rounded-full bg-success"
-          style={{ width: `${barWidth}%`, transition: "width 0.7s cubic-bezier(0.34,1.56,0.64,1)" }}
-        />
-      </div>
-
-      <p className="text-xs text-muted text-right -mt-1">{logged}g / {goal}g</p>
-    </div>
-  );
-}

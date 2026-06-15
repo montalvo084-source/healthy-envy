@@ -381,7 +381,10 @@ export default function SettingsPage() {
             <input
               type="number"
               value={proteinGoal}
-              onChange={(e) => setProteinGoal(e.target.value)}
+              onChange={(e) => {
+                setProteinGoal(e.target.value);
+                if (e.target.value) setWeeklyProteinGoal(String(Math.round(Number(e.target.value) * 7)));
+              }}
               className="w-full bg-bg border border-border rounded-lg px-3 py-3 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
             />
           </div>
@@ -392,7 +395,10 @@ export default function SettingsPage() {
             <input
               type="number"
               value={weeklyProteinGoal}
-              onChange={(e) => setWeeklyProteinGoal(e.target.value)}
+              onChange={(e) => {
+                setWeeklyProteinGoal(e.target.value);
+                if (e.target.value) setProteinGoal(String(Math.round(Number(e.target.value) / 7)));
+              }}
               placeholder={proteinGoal ? `${Number(proteinGoal) * 7} (auto)` : "auto"}
               className="w-full bg-bg border border-border rounded-lg px-3 py-3 text-app-text text-sm focus:outline-none focus:border-accent transition-colors"
             />

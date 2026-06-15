@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DailyLog } from "@/lib/types";
 import LogCard from "@/components/LogCard";
-import { todayStr } from "@/lib/calculations";
+import { todayStr, formatDate } from "@/lib/calculations";
 import { useProteinSources } from "@/lib/protein-sources-context";
 import { useToast } from "@/lib/toast-context";
 
@@ -45,6 +45,12 @@ export default function HistoryPage() {
     setDeleteConfirmId(null);
     loadLogs();
   }
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 14);
+  const cutoffStr = formatDate(cutoff);
+  const recentLogs = logs.filter((l) => l.date > cutoffStr);
+  const olderLogs = logs.filter((l) => l.date <= cutoffStr);
 
   if (loading) {
     return (
@@ -94,24 +100,57 @@ export default function HistoryPage() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {logs.map((log) => (
-            <div key={log.id} className="relative">
-              <LogCard log={log} isToday={log.date === todayStr()} sources={sources} />
-              {/* Delete button overlay */}
-              <button
-                type="button"
-                onClick={() => handleDelete(log)}
-                className={`absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-lg transition-colors ${
-                  deleteConfirmId === log.id
-                    ? "bg-danger text-white"
-                    : "text-muted hover:text-danger bg-bg border border-border"
-                }`}
-              >
-                {deleteConfirmId === log.id ? "Confirm?" : "Delete"}
-              </button>
+        <div className="flex flex-col gap-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-secondary mb-3">Last 14 Days</p>
+            {recentLogs.length === 0 ? (
+              <div className="bg-surface rounded-xl border border-border px-4 py-5 text-center">
+                <p className="text-secondary text-sm">No entries in the last 14 days — start logging to build your streak.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {recentLogs.map((log) => (
+                  <div key={log.id} className="relative">
+                    <LogCard log={log} isToday={log.date === todayStr()} sources={sources} />
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(log)}
+                      className={`absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-lg transition-colors ${
+                        deleteConfirmId === log.id
+                          ? "bg-danger text-white"
+                          : "text-muted hover:text-danger bg-bg border border-border"
+                      }`}
+                    >
+                      {deleteConfirmId === log.id ? "Confirm?" : "Delete"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {olderLogs.length > 0 && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-secondary mb-3">Earlier</p>
+              <div className="flex flex-col gap-3">
+                {olderLogs.map((log) => (
+                  <div key={log.id} className="relative">
+                    <LogCard log={log} isToday={false} sources={sources} />
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(log)}
+                      className={`absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-lg transition-colors ${
+                        deleteConfirmId === log.id
+                          ? "bg-danger text-white"
+                          : "text-muted hover:text-danger bg-bg border border-border"
+                      }`}
+                    >
+                      {deleteConfirmId === log.id ? "Confirm?" : "Delete"}
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
