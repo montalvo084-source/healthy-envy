@@ -96,7 +96,7 @@ export function calcAvgProtein(
     return sum + calcProteinTotal(log.proteinEntries ?? [], sources);
   }, 0);
 
-  return Math.round(total / days);
+  return Math.round(total / recent.length);
 }
 
 export function calcPhaseDay(startDate: string): number {
